@@ -1,0 +1,17 @@
+{
+  "valid": true,
+  "totals": {
+    "measurable_elements": 266,
+    "nested_clauses": 63,
+    "documents": 75
+  },
+  "errors": [],
+  "warnings": [
+    {
+      "code": "DOCUMENT_CODE_DUPLICATE",
+      "values": [
+        "3-5"
+      ]
+    }
+  ]
+}

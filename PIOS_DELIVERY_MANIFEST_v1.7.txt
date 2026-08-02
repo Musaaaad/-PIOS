@@ -1,0 +1,10 @@
+PIOS Integration Candidate v1.7
+Generated UTC: 2026-08-02T01:09:10.865195+00:00
+
+SHA-256  SIZE_BYTES  FILE
+cf10b22b4fd4bbf2f84704ef02dad2b90ca604b1a1d439399e9ee963ea70fe79  39236  PIOS_MASTER_PROJECT_HANDOFF_LATEST.docx
+beab61231af2927888baed3a52a71da13bcfb34f04fc311e5f9edd96c2456cf3  1167424  PIOS_FullStack_Integration_Candidate_v1.7.zip
+80368b0957e3c8b0e7a507e71479bc6bd4c1a8464dc221a48d336a7596f001af  362495  PIOS_Backend_Integration_Candidate_v1.7.zip
+794c49fbbbee13883f85444d58d170bd07d35e3974312da172e4ae0e648ea4c3  27617  PIOS_Frontend_Integration_Candidate_v1.7.zip
+60b26851fb7bab25236ce3625007adccddb7b21c385e9d5cccb8c042bd3eb31e  7976  PIOS_Integration_Execution_Tracker_v1.7.xlsx
+6ae8dc79394918459a685968e7e033410966810150d687c97d507ec62b7b0c5e  1936  PIOS_PostgreSQL_Object_Storage_Integration_TEST_REPORT_v1.7.json

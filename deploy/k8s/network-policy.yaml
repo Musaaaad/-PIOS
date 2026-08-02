@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pios-default-deny
+  namespace: pios
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pios-api-ingress
+  namespace: pios
+spec:
+  podSelector: {matchLabels: {app: pios-api}}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app: pios-frontend}}
+      ports: [{protocol: TCP, port: 8000}]

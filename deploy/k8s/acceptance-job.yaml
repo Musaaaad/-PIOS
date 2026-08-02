@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pios-deployment-acceptance
+  namespace: pios
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: acceptance
+          image: pios/backend:0.7.0
+          command: ["python","scripts/sprint6_deployment_acceptance_smoke.py"]
+          envFrom:
+            - configMapRef: {name: pios-config}
+            - secretRef: {name: pios-secrets}

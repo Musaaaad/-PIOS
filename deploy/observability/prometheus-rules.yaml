@@ -1,0 +1,15 @@
+groups:
+  - name: pios-operational-alerts
+    rules:
+      - alert: PIOSApiDown
+        expr: pios_up == 0
+        for: 2m
+        labels: {severity: P0}
+        annotations:
+          summary: "PIOS API is unavailable"
+      - alert: PIOSDatabaseUnreachable
+        expr: pios_database_reachable == 0
+        for: 1m
+        labels: {severity: P0}
+        annotations:
+          summary: "PIOS database is unreachable"

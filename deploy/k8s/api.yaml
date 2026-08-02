@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: pios-api, namespace: pios}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: pios-api}}
+  template:
+    metadata: {labels: {app: pios-api}}
+    spec:
+      containers:
+        - name: api
+          image: registry.example.sa/pios/api:0.5.0
+          ports: [{containerPort: 8000}]
+          envFrom: [{configMapRef: {name: pios-config}}, {secretRef: {name: pios-secrets}}]
+          readinessProbe: {httpGet: {path: /ready, port: 8000}, initialDelaySeconds: 10, periodSeconds: 10}
+          livenessProbe: {httpGet: {path: /health, port: 8000}, initialDelaySeconds: 20, periodSeconds: 20}
+          resources: {requests: {cpu: 200m, memory: 256Mi}, limits: {cpu: "1", memory: 1Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: pios-api, namespace: pios}
+spec: {selector: {app: pios-api}, ports: [{port: 8000, targetPort: 8000}]}

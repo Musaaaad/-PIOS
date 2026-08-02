@@ -1,0 +1,27 @@
+{
+  "algorithm": "SHA-256 chained event hashes",
+  "code": "AUDIT-EXP-1",
+  "event_count": 1,
+  "events": [
+    {
+      "action": "governance.legal_hold.place",
+      "actor_id": null,
+      "after_json": {
+        "code": "HOLD-AUDIT-1",
+        "reason": "Preserve audit evidence for formal review",
+        "scope_id": "AuditEvent",
+        "scope_type": "EntityType"
+      },
+      "before_json": null,
+      "chain_hash": "9beeb67667cd4a8a189e61ac456dda66445a3e0d1cb3cf84f185650a5b768886",
+      "created_at": "2026-08-02T01:06:37",
+      "entity_id": "58442042-8433-45d1-af79-389b67283136",
+      "entity_type": "LegalHold",
+      "id": "4687376b-bfb5-41c3-b207-015855658350",
+      "trace_id": "610562dd-313e-4d1d-95ac-071450106c6e"
+    }
+  ],
+  "period_end": "2026-08-03T01:06:37.922544+00:00",
+  "period_start": "2026-08-01T01:06:37.922544+00:00",
+  "root_hash": "9beeb67667cd4a8a189e61ac456dda66445a3e0d1cb3cf84f185650a5b768886"
+}

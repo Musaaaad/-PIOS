@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pios
+  namespace: pios
+  annotations: {nginx.ingress.kubernetes.io/proxy-body-size: "30m"}
+spec:
+  tls: [{hosts: [pios.example.sa], secretName: pios-tls}]
+  rules:
+    - host: pios.example.sa
+      http:
+        paths:
+          - {path: /api, pathType: Prefix, backend: {service: {name: pios-api, port: {number: 8000}}}}
+          - {path: /, pathType: Prefix, backend: {service: {name: pios-frontend, port: {number: 80}}}}

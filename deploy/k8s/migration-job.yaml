@@ -1,0 +1,13 @@
+apiVersion: batch/v1
+kind: Job
+metadata: {name: pios-migration, namespace: pios}
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migration
+          image: registry.example.sa/pios/api:0.5.0
+          command: ["alembic","upgrade","head"]
+          envFrom: [{configMapRef: {name: pios-config}}, {secretRef: {name: pios-secrets}}]
+  backoffLimit: 2

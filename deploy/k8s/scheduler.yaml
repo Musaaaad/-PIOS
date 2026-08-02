@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: pios-notification-refresh, namespace: pios}
+spec:
+  schedule: "*/15 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: refresh
+              image: registry.example.sa/pios/api:0.5.0
+              command: ["python","scripts/refresh_notifications_job.py"]
+              envFrom: [{configMapRef: {name: pios-config}}, {secretRef: {name: pios-secrets}}]

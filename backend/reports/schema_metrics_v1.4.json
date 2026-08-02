@@ -1,0 +1,7 @@
+{
+  "tables": 92,
+  "columns": 1305,
+  "indexes": 72,
+  "foreign_keys": 203,
+  "constraints": 374
+}

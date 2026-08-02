@@ -1,0 +1,28 @@
+"""Sprint 9 risk intelligence, portfolio and AI governance.
+
+Revision ID: 0009_sprint9_intelligence_ai_governance
+Revises: 0008_sprint8_continuous_assurance
+"""
+from alembic import op
+revision="0009_sprint9_intelligence_ai_governance"
+down_revision="0008_sprint8_continuous_assurance"
+branch_labels=None
+depends_on=None
+
+def upgrade():
+    for sql in [
+      "CREATE TABLE IF NOT EXISTS risk_assessment_runs (id UUID PRIMARY KEY, site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE, code VARCHAR(64) NOT NULL, period_label VARCHAR(64) NOT NULL, status VARCHAR(32) NOT NULL DEFAULT 'Completed', methodology_version VARCHAR(32) NOT NULL DEFAULT '1.0', generated_at TIMESTAMPTZ NOT NULL DEFAULT now(), summary_json JSONB NOT NULL DEFAULT '{}'::jsonb, created_by UUID REFERENCES users(id) ON DELETE SET NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), row_version INTEGER NOT NULL DEFAULT 1, CONSTRAINT uq_risk_run_site_code UNIQUE(site_id,code))",
+      "CREATE INDEX IF NOT EXISTS ix_risk_run_site_generated ON risk_assessment_runs(site_id,generated_at)",
+      "CREATE TABLE IF NOT EXISTS risk_assessment_items (id UUID PRIMARY KEY, run_id UUID NOT NULL REFERENCES risk_assessment_runs(id) ON DELETE CASCADE, measurable_element_id UUID NOT NULL REFERENCES measurable_elements(id) ON DELETE RESTRICT, risk_score INTEGER NOT NULL, risk_band VARCHAR(16) NOT NULL, trend VARCHAR(16) NOT NULL DEFAULT 'Unknown', signals JSONB NOT NULL DEFAULT '[]'::jsonb, rationale TEXT NOT NULL, owner_role_code VARCHAR(64), human_status VARCHAR(32) NOT NULL DEFAULT 'Unreviewed', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), row_version INTEGER NOT NULL DEFAULT 1, CONSTRAINT uq_risk_item_run_me UNIQUE(run_id,measurable_element_id))",
+      "CREATE INDEX IF NOT EXISTS ix_risk_item_run_band_score ON risk_assessment_items(run_id,risk_band,risk_score)",
+      "CREATE TABLE IF NOT EXISTS ai_governance_policies (id UUID PRIMARY KEY, organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE, code VARCHAR(64) NOT NULL, name VARCHAR(255) NOT NULL, status VARCHAR(32) NOT NULL DEFAULT 'Effective', allowed_use_cases JSONB NOT NULL DEFAULT '[]'::jsonb, prohibited_actions JSONB NOT NULL DEFAULT '[]'::jsonb, human_review_required BOOLEAN NOT NULL DEFAULT TRUE, model_registry JSONB NOT NULL DEFAULT '{}'::jsonb, approved_by UUID REFERENCES users(id) ON DELETE SET NULL, approved_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), row_version INTEGER NOT NULL DEFAULT 1, CONSTRAINT uq_ai_policy_org_code UNIQUE(organization_id,code))",
+      "CREATE TABLE IF NOT EXISTS ai_recommendations (id UUID PRIMARY KEY, site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE, risk_run_id UUID REFERENCES risk_assessment_runs(id) ON DELETE SET NULL, measurable_element_id UUID REFERENCES measurable_elements(id) ON DELETE SET NULL, recommendation_type VARCHAR(64) NOT NULL DEFAULT 'RiskReduction', title VARCHAR(500) NOT NULL, recommendation_text TEXT NOT NULL, rationale TEXT NOT NULL, confidence DOUBLE PRECISION NOT NULL, status VARCHAR(32) NOT NULL DEFAULT 'NeedsHumanReview', source_context JSONB NOT NULL DEFAULT '{}'::jsonb, prompt_hash VARCHAR(64) NOT NULL, model_id VARCHAR(128) NOT NULL DEFAULT 'rules-engine-v1', guardrail_result JSONB NOT NULL DEFAULT '{}'::jsonb, created_by UUID REFERENCES users(id) ON DELETE SET NULL, reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL, reviewed_at TIMESTAMPTZ, decision VARCHAR(32), decision_comment TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), row_version INTEGER NOT NULL DEFAULT 1)",
+      "CREATE INDEX IF NOT EXISTS ix_ai_recommendation_site_status_created ON ai_recommendations(site_id,status,created_at)",
+      "CREATE TABLE IF NOT EXISTS portfolio_snapshots (id UUID PRIMARY KEY, organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE, code VARCHAR(64) NOT NULL, period_label VARCHAR(64) NOT NULL, methodology_version VARCHAR(32) NOT NULL DEFAULT '1.0', generated_at TIMESTAMPTZ NOT NULL DEFAULT now(), summary_json JSONB NOT NULL DEFAULT '{}'::jsonb, created_by UUID REFERENCES users(id) ON DELETE SET NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), row_version INTEGER NOT NULL DEFAULT 1, CONSTRAINT uq_portfolio_org_code UNIQUE(organization_id,code))",
+      "CREATE TABLE IF NOT EXISTS portfolio_site_metrics (id UUID PRIMARY KEY, snapshot_id UUID NOT NULL REFERENCES portfolio_snapshots(id) ON DELETE CASCADE, site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE, readiness_score INTEGER, risk_score INTEGER, open_p0 INTEGER NOT NULL DEFAULT 0, open_p1 INTEGER NOT NULL DEFAULT 0, esr_red INTEGER NOT NULL DEFAULT 0, data_quality_issues INTEGER NOT NULL DEFAULT 0, overdue_controls INTEGER NOT NULL DEFAULT 0, status VARCHAR(32) NOT NULL, details JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), row_version INTEGER NOT NULL DEFAULT 1, CONSTRAINT uq_portfolio_metric_snapshot_site UNIQUE(snapshot_id,site_id))",
+      "CREATE INDEX IF NOT EXISTS ix_portfolio_metric_snapshot_status ON portfolio_site_metrics(snapshot_id,status)"
+    ]: op.execute(sql)
+
+def downgrade():
+    for t in ['portfolio_site_metrics','portfolio_snapshots','ai_recommendations','ai_governance_policies','risk_assessment_items','risk_assessment_runs']:
+        op.execute(f'DROP TABLE IF EXISTS {t} CASCADE')

@@ -1,0 +1,10 @@
+{
+  "title": "PIOS Operations Command Center",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {"type":"stat","title":"API Up","targets":[{"expr":"pios_up"}],"gridPos":{"h":6,"w":6,"x":0,"y":0}},
+    {"type":"stat","title":"Database Reachable","targets":[{"expr":"pios_database_reachable"}],"gridPos":{"h":6,"w":6,"x":6,"y":0}},
+    {"type":"text","title":"PIOS safety note","options":{"content":"SLO status does not override ESR or open patient-safety actions."},"gridPos":{"h":6,"w":12,"x":12,"y":0}}
+  ]
+}

@@ -1,0 +1,287 @@
+{
+  "run": {
+    "id": "8ee454fd-c5ba-4dc8-ad2b-6160c27d5d31",
+    "run_code": "OPS-ACCEPT-001",
+    "scope": "PreGoLive",
+    "status": "Completed",
+    "outcome": "Pass",
+    "summary": {
+      "total": 24,
+      "required": 24,
+      "pass": 24,
+      "fail": 0,
+      "pending": 0,
+      "blocked": 0,
+      "waived": 0,
+      "blockers": [],
+      "deployment_ready": true,
+      "outcome": "Pass"
+    }
+  },
+  "checks": [
+    {
+      "code": "API_HEALTH",
+      "category": "Platform",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "API process responds and exposes release metadata",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "DATABASE_REACHABLE",
+      "category": "Database",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Database connection succeeds",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "SCHEMA_TABLES_PRESENT",
+      "category": "Database",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Expected relational model is present",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "BASELINE_COUNTS_VALID",
+      "category": "Data",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "41/266/63/75/12 baseline counts are valid",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "MIGRATIONS_APPLIED",
+      "category": "Database",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Alembic head is applied in target database",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "OBJECT_STORAGE_CONFIGURED",
+      "category": "Storage",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Object storage is configured for the environment",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "OBJECT_STORAGE_PRIVATE_RW",
+      "category": "Storage",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Private bucket write/read/delete test passes",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "BACKUP_RESTORE_TESTED",
+      "category": "Resilience",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Database and object storage restore test passes",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "OIDC_MODE_ENABLED",
+      "category": "Identity",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Target uses OIDC rather than development authentication",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "OIDC_DISCOVERY_JWKS",
+      "category": "Identity",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Discovery and JWKS endpoints validate",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "OIDC_TOKEN_VALIDATION",
+      "category": "Identity",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Signed token issuer/audience/expiry validate",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "OIDC_ROLE_SITE_CLAIMS",
+      "category": "Identity",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Role and site claims enforce least privilege",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "DEV_TOKENS_DISABLED",
+      "category": "Security",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Development tokens are disabled",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "TLS_ENABLED",
+      "category": "Security",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "TLS is enabled for API and frontend",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "CORS_RESTRICTED",
+      "category": "Security",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "CORS excludes wildcard and local-only origins in production-like environments",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "MONITORING_ENABLED",
+      "category": "Operations",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Monitoring/alerting is declared enabled",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "AUDIT_WRITE_PASS",
+      "category": "Audit",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Audit table is writable and baseline audit structure exists",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "FRONTEND_URL_CONFIGURED",
+      "category": "Frontend",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Frontend public URL is configured",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "NOTIFICATION_SCHEDULER_PASS",
+      "category": "Operations",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Scheduler executes without duplicate notifications",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "EXPORT_RETENTION_PASS",
+      "category": "Operations",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Export generation, checksum and cleanup pass",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "PILOT_USERS_READY",
+      "category": "Pilot",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "Eight required pilot participants are trained and access-tested",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "P0_CAMPAIGN_READY",
+      "category": "Pilot",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "P0 campaign contains exactly 48 unique requests",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "UAT_CRITICAL_PASS",
+      "category": "Pilot",
+      "required": true,
+      "mode": "Automated",
+      "status": "Pass",
+      "expected": "All critical UAT scenarios pass",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    },
+    {
+      "code": "FORMAL_GO_DECISION",
+      "category": "Governance",
+      "required": true,
+      "mode": "Manual",
+      "status": "Pass",
+      "expected": "Authorized Go/ConditionalGo decision is recorded",
+      "measured": "test",
+      "evidence": "test:evidence",
+      "details": null
+    }
+  ]
+}

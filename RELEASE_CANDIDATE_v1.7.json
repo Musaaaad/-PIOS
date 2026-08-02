@@ -1,0 +1,27 @@
+{
+  "release": "PostgreSQL & Object Storage Integration Candidate v1.7",
+  "application_backend_version": "1.4.0",
+  "application_frontend_version": "1.0.0",
+  "candidate_version": "1.7",
+  "status": "CANDIDATE-PREPARED-LOCAL-SECURITY-STORAGE-TESTS-PASS",
+  "generated_at_utc": "2026-08-02T01:09:09.472930+00:00",
+  "runtime_execution": {
+    "postgresql_16": false,
+    "s3_compatible_object_storage": false,
+    "institutional_oidc": false
+  },
+  "reason_runtime_not_executed": "Docker, Podman, PostgreSQL server/client, and MinIO executables were not available.",
+  "fresh_tests": {
+    "storage_access": 5,
+    "oidc_security_site_isolation": 6,
+    "total": 11,
+    "passed": 11,
+    "failed": 0
+  },
+  "inherited_verified_baseline": {
+    "sprint": "Sprint 15 v1.6",
+    "backend_tests": 70,
+    "passed": 70,
+    "repeated": false
+  }
+}

@@ -1,0 +1,2436 @@
+{
+  "release": {
+    "id": "9feb5372-86bb-4dba-a80b-5b1c4ce852e1",
+    "code": "OPS-BASE-001",
+    "classification": "OperationalBaseline",
+    "period_label": "TGH-BASELINE-001",
+    "readiness_score": 0,
+    "overall_status": "CriticalOpenActions",
+    "critical_open_actions": true,
+    "esr_status": {
+      "MM.5": {
+        "total": 4,
+        "sufficient": 0,
+        "open_critical": 0,
+        "status": "Amber"
+      },
+      "MM.6": {
+        "total": 3,
+        "sufficient": 0,
+        "open_critical": 0,
+        "status": "Amber"
+      },
+      "MM.41": {
+        "total": 12,
+        "sufficient": 0,
+        "open_critical": 0,
+        "status": "Amber"
+      }
+    },
+    "details": {
+      "snapshot_item_count": 266,
+      "claim": "Evidence readiness baseline; not a CBAHI accreditation score"
+    }
+  },
+  "snapshot": {
+    "id": "a2059aa6-82a4-411b-a6c4-9a415cc4f01b",
+    "captured_at": "2026-08-02 01:06:57",
+    "calculation_version": "1.0"
+  },
+  "items": [
+    {
+      "me_id": "MM.1.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.1.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.10.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.10.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.10.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.10.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.10",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.11",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.12",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.13",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.14",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.15",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.11.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.10",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.11",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.12.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.13.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.14.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.14.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.14.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.15.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.15.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.15.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.15.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.15.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.15.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.15.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.16.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.16.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.16.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.16.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.16.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.16.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.17.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.17.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.17.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.17.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.18.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.18.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.18.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.18.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.18.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.19.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.19.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.19.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.19.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.2.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.2.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.2.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.2.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.20.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.20.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.20.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.20.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.20.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.20.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.20.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.20.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.21.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.21.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.21.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.21.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.22.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.22.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.22.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.22.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.22.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.23.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.23.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.23.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.23.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.24.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.24.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.24.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.24.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.24.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.24.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.25.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.25.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.25.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.25.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.10",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.11",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.12",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.13",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.14",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.15",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.26.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.27.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.10",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.11",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.12",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.13",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.14",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.15",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.16",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.28.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.29.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.29.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.29.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.29.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.29.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.29.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.3.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.3.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.3.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.3.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.3.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.3.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.3.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.30.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.30.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.30.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.30.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.30.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.30.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.30.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.30.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.31.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.31.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.31.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.31.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.31.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.31.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.31.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.32.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.32.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.32.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.32.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.32.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.32.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.32.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.33.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.33.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.33.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.33.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.34.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.34.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.34.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.34.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.34.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.35.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.35.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.35.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.36.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.36.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.36.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.36.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.36.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.36.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.36.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.36.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.37.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.37.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.37.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.37.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.37.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.37.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.37.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.38.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.38.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.38.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.39.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.39.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.39.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.39.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.4.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.4.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.4.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.4.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.4.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.4.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.40.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.10",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.11",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.12",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.41.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.5.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.5.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.5.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.5.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.6.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.6.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.6.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.7.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.7.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.7.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.7.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.7.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.5",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.6",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.7",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.8",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.8.9",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.9.1",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.9.2",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.9.3",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    },
+    {
+      "me_id": "MM.9.4",
+      "applicability": "Applicable",
+      "evidence_status": "Missing",
+      "open_findings": 0,
+      "highest_severity": null,
+      "readiness_state": "Missing",
+      "rationale": "No accepted or partial evidence is linked."
+    }
+  ]
+}

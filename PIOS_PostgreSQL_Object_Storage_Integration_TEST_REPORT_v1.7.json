@@ -1,0 +1,60 @@
+{
+  "release": "PostgreSQL & Object Storage Integration Candidate v1.7",
+  "status": "CANDIDATE-PREPARED-LOCAL-SECURITY-STORAGE-TESTS-PASS",
+  "executed_now": {
+    "new_candidate_tests": {
+      "total": 11,
+      "passed": 11,
+      "failed": 0,
+      "storage_access": {
+        "total": 5,
+        "passed": 5,
+        "coverage": [
+          "upload/readback",
+          "SHA-256",
+          "site-scoped key",
+          "cross-site denial/admin override",
+          "unsafe scope and EICAR rejection"
+        ]
+      },
+      "oidc_security": {
+        "total": 6,
+        "passed": 6,
+        "coverage": [
+          "valid RS256/JWKS",
+          "wrong audience",
+          "wrong issuer",
+          "expired token",
+          "wrong key",
+          "site isolation"
+        ]
+      }
+    },
+    "candidate_assets": {
+      "postgresql_16_compose": "PREPARED",
+      "minio_s3_compose": "PREPARED",
+      "verified_schema_seed_embedded": true,
+      "post_import_verification_sql": "PREPARED",
+      "repeatable_runner": "PREPARED"
+    }
+  },
+  "not_executed": {
+    "postgresql_schema_seed_import": "No PostgreSQL or container runtime.",
+    "actual_post_import_counts": "Requires running PostgreSQL after import.",
+    "70_tests_on_postgresql": "No PostgreSQL runtime.",
+    "s3_api_against_minio": "No MinIO/container runtime; local storage lifecycle was tested instead.",
+    "institutional_oidc": "No authorized institutional issuer, tenant, JWKS endpoint, or identities; offline cryptographic tests executed instead."
+  },
+  "expected_post_import_metrics": {
+    "tables": 92,
+    "columns": 1305,
+    "indexes": 72,
+    "foreign_keys": 203,
+    "constraints": 374
+  },
+  "baseline_not_repeated": {
+    "sprint15": "70/70 PASS",
+    "reason": "Avoided repeating Sprint 15; only v1.7 delta tests were executed."
+  },
+  "guardrail": "No live institutional, production, CBAHI compliance, or accreditation-readiness claim."
+}

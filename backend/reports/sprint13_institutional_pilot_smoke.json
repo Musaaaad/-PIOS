@@ -1,0 +1,15 @@
+{
+  "backend_version": "1.4.0",
+  "mode": "Synthetic",
+  "run_status": "Completed",
+  "session_execution_id": "102c1dc6-5e59-4e86-a09e-7f76becf76cc",
+  "metric_status": "TargetMet",
+  "report_status": "Published",
+  "verified_identities": 3,
+  "completed_sessions": 1,
+  "adoption_events": 3,
+  "feedback_count": 1,
+  "published_reports": 1,
+  "guardrail": "Institutional pilot dashboards report controlled execution and outcomes; they do not approve CBAHI compliance or accreditation readiness.",
+  "institutional_claim": false
+}

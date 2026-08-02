@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b4f6c" />
+  <title>PIOS - منصة إدارة وتشغيل الصيدلية</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip" href="#main">انتقل إلى المحتوى</a>
+  <div id="app" class="app-shell">
+    <aside class="sidebar" aria-label="التنقل الرئيسي">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">Rx</div>
+        <div><strong>PIOS</strong><span>Pharmacy Intelligence OS</span></div>
+      </div>
+      <nav id="nav"></nav>
+      <div class="sidebar-foot">
+        <button id="langBtn" class="ghost">EN</button>
+        <button id="demoBtn" class="ghost">وضع العرض</button>
+        <small>v<span id="version">0.1.0</span></small>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div>
+          <button id="menuBtn" class="icon-btn mobile-only" aria-label="القائمة">☰</button>
+          <span id="pageEyebrow" class="eyebrow">مستشفى طريف العام</span>
+          <h1 id="pageTitle">لوحة التشغيل</h1>
+        </div>
+        <div class="top-actions">
+          <button id="refreshBtn" class="icon-btn" title="تحديث">↻</button>
+          <button id="alertsBtn" class="icon-btn alert-button" title="التنبيهات">🔔<span id="alertBadge">0</span></button>
+          <div class="user-chip"><span class="avatar">ق</span><div><strong id="userName">قائد الاعتماد</strong><small id="userRole">Accreditation Lead</small></div></div>
+        </div>
+      </header>
+      <div id="demoNotice" class="demo-notice" hidden></div>
+      <main id="main" tabindex="-1"></main>
+    </div>
+    <aside id="alertDrawer" class="drawer" aria-label="التنبيهات" aria-hidden="true">
+      <div class="drawer-head"><h2>التنبيهات</h2><button id="closeDrawer" class="icon-btn">×</button></div>
+      <div id="alertsList"></div>
+    </aside>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="config.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
