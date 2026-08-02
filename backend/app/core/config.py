@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     export_retention_days: int = 30
     notification_default_limit: int = 100
 
-    release_version: str = "1.3.0"
+    release_version: str = "1.4.0"
     release_sha: str | None = None
     frontend_base_url: str = "http://localhost:8080"
     deployment_environment_code: str = "local"
