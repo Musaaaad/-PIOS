@@ -49,8 +49,11 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 cp -r "$SRC"/. "$OUT"/
 
-# Build inputs, not site content.
-rm -rf "$OUT/tests" "$OUT/Dockerfile" "$OUT/nginx.conf" "$OUT/MANIFEST.txt"
+# Build/test inputs, not site content. node_modules in particular must never be
+# published: it is added by the frontend test harness and would otherwise ship
+# thousands of dependency files to a public URL.
+rm -rf "$OUT/tests" "$OUT/Dockerfile" "$OUT/nginx.conf" "$OUT/MANIFEST.txt" \
+       "$OUT/node_modules" "$OUT/package.json" "$OUT/package-lock.json"
 
 # Generated fresh every build. defaultToken is deliberately empty: the value in
 # the committed frontend/config.js is a development token and must never be
@@ -100,5 +103,16 @@ for required in index.html app.js styles.css config.js demo-data.js; do
   [ -f "$OUT/$required" ] || { echo "[build_frontend] FATAL: missing $required" >&2; exit 1; }
 done
 
-echo "[build_frontend] built $(find "$OUT" -type f | wc -l) files"
+FILE_COUNT=$(find "$OUT" -type f | wc -l)
+echo "[build_frontend] built $FILE_COUNT files"
+
+# The site is a fixed, small set of static assets. A large count means build or
+# test inputs leaked into the published output (node_modules being the likely
+# culprit), so fail rather than publish them.
+if [ "$FILE_COUNT" -gt 25 ]; then
+  echo "[build_frontend] FATAL: $FILE_COUNT files in output - build inputs leaked into the site" >&2
+  find "$OUT" -maxdepth 1 >&2
+  exit 1
+fi
+
 echo "[build_frontend] OK"

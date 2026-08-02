@@ -10,6 +10,7 @@
 <body>
   <a class="skip" href="#main">انتقل إلى المحتوى</a>
   <div id="app" class="app-shell">
+    <div id="navBackdrop" class="nav-backdrop" hidden></div>
     <aside class="sidebar" aria-label="التنقل الرئيسي">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">Rx</div>
@@ -25,7 +26,7 @@
     <div class="workspace">
       <header class="topbar">
         <div>
-          <button id="menuBtn" class="icon-btn mobile-only" aria-label="القائمة">☰</button>
+          <button id="menuBtn" class="icon-btn mobile-only" aria-label="القائمة" aria-controls="nav" aria-expanded="false">☰</button>
           <span id="pageEyebrow" class="eyebrow">مستشفى طريف العام</span>
           <h1 id="pageTitle">لوحة التشغيل</h1>
         </div>
