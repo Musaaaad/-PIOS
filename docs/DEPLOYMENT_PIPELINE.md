@@ -72,6 +72,20 @@ If the required secrets are absent this workflow **reports and stops without
 failing**, so an unconfigured repository keeps a green pipeline instead of a
 permanently red one. It does not silently pretend to deploy.
 
+### Topology
+
+The frontend is already live on GitHub Pages, so the intended shape is:
+
+    https://musaaaad.github.io/-PIOS/   (Pages, already deployed)
+                  |
+                  |  HTTPS, cross-origin -> requires PIOS_CORS_ORIGINS
+                  v
+    https://pios-api.onrender.com       (Render: FastAPI + PostgreSQL 16)
+
+`render.yaml` also defines an optional `pios-frontend` static site as a
+same-origin alternative. Delete that service from the blueprint if you only
+want the Pages frontend.
+
 ### One-time setup
 
 1. **Create a Render account** at <https://render.com> (free tier is enough to
@@ -84,14 +98,36 @@ permanently red one. It does not silently pretend to deploy.
 
    | Service | Key | Value |
    |---|---|---|
-   | pios-api | `PIOS_CORS_ORIGINS` | the frontend origin, e.g. `https://pios-frontend.onrender.com` |
+   | pios-api | `PIOS_CORS_ORIGINS` | `https://musaaaad.github.io` — origin only: no path, no trailing slash |
    | pios-api | `PIOS_OIDC_ISSUER` | your identity provider's issuer URL |
    | pios-api | `PIOS_OIDC_AUDIENCE` | e.g. `pios-api` |
    | pios-api | `PIOS_OIDC_JWKS_URL` | your provider's JWKS endpoint |
-   | pios-frontend | `PIOS_API_BASE_URL` | e.g. `https://pios-api.onrender.com/api/v1` |
+   | pios-frontend | `PIOS_API_BASE_URL` | e.g. `https://pios-api.onrender.com/api/v1` (only if using the optional Render frontend) |
+
+   `PIOS_CORS_ORIGINS` must be the bare origin. `app/main.py` passes it
+   straight to Starlette's `CORSMiddleware`, which matches the browser's
+   `Origin` header exactly — `https://musaaaad.github.io/-PIOS/` would never
+   match and every API call would be blocked, silently dropping the app back
+   into demo mode.
 
    Until the OIDC values are set the API rejects all authentication. That is
    the correct failure mode for a production deployment — it is not broken.
+
+4. **Point the Pages frontend at the live API.** Repository → Settings →
+   Secrets and variables → Actions → **Variables** → New repository variable:
+
+   - Name: `PIOS_API_BASE_URL`
+   - Value: `https://pios-api.onrender.com/api/v1`
+
+   Then re-run the **Deploy Frontend (GitHub Pages)** workflow. The build
+   switches `demoMode` to `false` and the app begins calling the live backend.
+
+### Region
+
+`pios-db` and `pios-api` are both pinned to `frankfurt`. They **must** stay in
+the same region: Render's internal connection string only resolves within a
+region, and omitting the key on the database silently defaults it to Oregon,
+which leaves the API unable to reach it.
 
 4. **Add the GitHub repository secrets** (Settings → Secrets and variables →
    Actions → **Secrets**):
