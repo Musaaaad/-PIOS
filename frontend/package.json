@@ -1,0 +1,13 @@
+{
+  "name": "pios-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PIOS static frontend - runtime tests for the built artifact",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

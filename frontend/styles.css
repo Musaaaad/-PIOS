@@ -4,3 +4,4 @@
 html[dir="ltr"] th,html[dir="ltr"] td,html[dir="ltr"] .nav-item{text-align:left}
 
 .risk-band-list{display:grid;gap:.8rem}.risk-band-row{display:grid;grid-template-columns:90px 1fr 48px;gap:.75rem;align-items:center}.risk-band-row .progress span{background:linear-gradient(90deg,#f04438,#f79009)}
+.nav-backdrop{display:none}.api-error{margin-top:1rem;background:#fee4e2;border:1px solid #f04438;color:#7a271a;padding:.75rem 1rem;border-radius:.7rem;font-size:.85rem}@media(max-width:760px){.nav-backdrop{display:block;position:fixed;inset:0;background:rgba(11,79,108,.45);z-index:9;border:0;opacity:0;pointer-events:none;transition:opacity .2s}.nav-backdrop.show{opacity:1;pointer-events:auto}.sidebar{transition:inset-inline-start .25s ease}body.nav-open{overflow:hidden}}

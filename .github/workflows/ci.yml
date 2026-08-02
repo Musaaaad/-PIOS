@@ -12,4 +12,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: cd frontend && ./tests/js_syntax_check.sh
+      # Runtime UI tests. These build the real artifact via
+      # deploy/render/build_frontend.sh and drive it in jsdom, so they cover
+      # what Render and Pages actually publish rather than source alone.
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm test
       - run: docker compose build api frontend
