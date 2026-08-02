@@ -92,31 +92,28 @@ services:
     name: pios-frontend
     runtime: static
     branch: main
-    buildCommand: |
-      set -eu
-      mkdir -p dist
-      cp -r frontend/. dist/
-      rm -rf dist/tests dist/Dockerfile dist/nginx.conf dist/MANIFEST.txt
-      # Generated at build time; the committed frontend/config.js is untouched.
-      # defaultToken is emptied - the source default is a development token and
-      # must not be published.
-      cat > dist/config.js <<EOF
-      window.PIOS_CONFIG = {
-        apiBase: "${PIOS_API_BASE_URL:-}",
-        demoMode: ${PIOS_DEMO_MODE:-false},
-        defaultToken: "",
-        refreshSeconds: 60,
-        appVersion: "1.0.0"
-      };
-      EOF
+    # A committed, locally tested script rather than an inline command: an
+    # inline multi-line heredoc is folded by YAML into an escaped one-line
+    # scalar, which is fragile and cannot be tested outside Render.
+    buildCommand: bash deploy/render/build_frontend.sh
     staticPublishPath: ./dist
     autoDeploy: true
     envVars:
-      # Set to the pios-api service URL, e.g. https://pios-api.onrender.com/api/v1
+      # Deliberately a plain empty default rather than `sync: false`. A
+      # sync:false variable makes Render prompt for a value while applying the
+      # blueprint, and an apply that is clicked through without supplying one
+      # can leave this service unprovisioned. With an empty default the site
+      # always provisions, serving demo mode, and the real API URL is set
+      # afterwards in the dashboard - at which point Render redeploys it.
+      #
+      # Set to the pios-api URL once it exists, e.g.
+      #   https://pios-api.onrender.com/api/v1
       - key: PIOS_API_BASE_URL
-        sync: false
+        value: ""
+      # Empty means "derive from PIOS_API_BASE_URL": demo when unset, live when
+      # set. Override to "true" to force demo mode even against a live API.
       - key: PIOS_DEMO_MODE
-        value: "false"
+        value: ""
     routes:
       - type: rewrite
         source: /*

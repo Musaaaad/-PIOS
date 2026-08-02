@@ -44,58 +44,18 @@ jobs:
           # never reach a public URL.
           ./tests/js_syntax_check.sh
 
-      - name: Stage site and generate production config
+      - name: Build the site
         env:
           # Optional. Set as a repository *variable* (Settings -> Secrets and
           # variables -> Actions -> Variables), not a secret - it is a public
           # URL, not a credential. Leave unset for demo-only mode.
           PIOS_API_BASE_URL: ${{ vars.PIOS_API_BASE_URL }}
-        run: |
-          set -euo pipefail
-          mkdir -p _site
-          cp -r frontend/. _site/
-          rm -rf _site/tests _site/Dockerfile _site/nginx.conf _site/MANIFEST.txt
-
-          API_BASE="${PIOS_API_BASE_URL:-}"
-          if [ -n "$API_BASE" ]; then
-            DEMO=false
-            echo "Building against API: $API_BASE"
-          else
-            DEMO=true
-            echo "No PIOS_API_BASE_URL set - building in demo mode (no backend)."
-          fi
-
-          # Generated at build time; the committed frontend/config.js is never
-          # modified. defaultToken is deliberately emptied: the source default
-          # is a development token and must never be published to a public URL.
-          cat > _site/config.js <<EOF
-          window.PIOS_CONFIG = {
-            apiBase: "${API_BASE}",
-            demoMode: ${DEMO},
-            defaultToken: "",
-            refreshSeconds: 60,
-            appVersion: "1.0.0"
-          };
-          EOF
-
-          # Pages serves no custom headers, so carry the CSP/security headers
-          # from nginx.conf into a meta tag rather than dropping them entirely.
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("_site/index.html")
-          html = p.read_text(encoding="utf-8")
-          csp = ("<meta http-equiv=\"Content-Security-Policy\" content=\""
-                 "default-src 'self'; connect-src 'self' https:; "
-                 "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
-                 "img-src 'self' data:; base-uri 'self'; form-action 'none'\">\n  ")
-          marker = '<meta name="viewport"'
-          assert marker in html, "index.html layout changed; CSP injection point not found"
-          p.write_text(html.replace(marker, csp + marker, 1), encoding="utf-8")
-          print("CSP meta tag injected")
-          PY
-
-          touch _site/.nojekyll
-          ls -la _site
+          OUT_DIR: ${{ github.workspace }}/_site
+        # Same committed script the Render static site uses, so both hosts
+        # build through one tested path instead of two drifting copies. It
+        # generates config.js (emptying the development token), injects the
+        # CSP meta tag, and fails the build if either safeguard regresses.
+        run: bash deploy/render/build_frontend.sh
 
       - uses: actions/configure-pages@v5
         with:
