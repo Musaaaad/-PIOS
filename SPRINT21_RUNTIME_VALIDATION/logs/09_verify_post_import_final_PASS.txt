@@ -1,0 +1,25 @@
+ tables 
+--------
+     92
+(1 row)
+
+ columns 
+---------
+    1305
+(1 row)
+
+ indexes 
+---------
+      72
+(1 row)
+
+ foreign_keys 
+--------------
+          203
+(1 row)
+
+ constraints 
+-------------
+         374
+(1 row)
+

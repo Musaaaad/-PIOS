@@ -1,0 +1,42 @@
+{
+  "blockers": [
+    {
+      "id": "BLOCK-01",
+      "phase": "3 - Object Storage Validation",
+      "status": "BLOCKED",
+      "description": "No MinIO or other S3-compatible object storage service is installed or running in this environment.",
+      "why_not_resolved": "Installing MinIO would mean installing a new system service, which is out of scope for this validation pass (instructed to use what is already available, not build new infrastructure).",
+      "unblock_action": "Run on a host with Docker (to use the project's own integration_v1.7/docker-compose.integration.yml) or with MinIO already installed."
+    },
+    {
+      "id": "BLOCK-02",
+      "phase": "4 - OIDC Validation",
+      "status": "BLOCKED",
+      "description": "No Keycloak or other real OIDC provider is installed or running in this environment.",
+      "why_not_resolved": "Same reasoning as BLOCK-01, plus: even if a throwaway OIDC provider were stood up, the task rules explicitly forbid using institutional production identities or secrets, and no authorized institutional issuer exists to test against regardless.",
+      "unblock_action": "Deploy the authored deploy/keycloak/pios-realm.json to a real Keycloak instance, or connect to an authorized institutional OIDC issuer/tenant."
+    },
+    {
+      "id": "BLOCK-03",
+      "phase": "2 - PostgreSQL Validation (Alembic chain)",
+      "status": "MITIGATED - underlying issue still FAIL, a supported workaround now exists",
+      "description": "alembic upgrade head still does not complete against a fresh/empty PostgreSQL database, for the same reason as before (revision 0011_sprint11_intelligence_to_action collides with what 0001_initial already created). This has NOT been fixed and migrations 0001-0013 were not edited.",
+      "resolution": "backend/scripts/fresh_install_postgresql.sh provides a verified, tested, non-Alembic-chain path for fresh installs: apply the verified schema+seed directly, verify catalog metrics and run the full test suite, then `alembic stamp head` (not `upgrade head`) only after all of that passes. Verified end-to-end against a real PostgreSQL 16 database - see SPRINT21_RUNTIME_VALIDATION_REPORT_2.md. Existing installations already at a revision 0002+ continue to use `alembic upgrade head` normally (see docs/DATABASE_MIGRATION_POLICY.md section B).",
+      "why_not_fully_resolved": "The Alembic migration chain itself is unfixed and remains unusable for a fresh install starting from truly nothing. This is a deliberate scope boundary (no historical migration file may be edited without separate approval), not an oversight.",
+      "unblock_action": "A genuine fix (rewriting 0001_initial as a true historical snapshot, or adding existence guards inside 0011-0013's content) requires explicit, separate approval before any historical migration file is touched. See docs/DATABASE_MIGRATION_POLICY.md section C."
+    },
+    {
+      "id": "BLOCK-04",
+      "phase": "1 - Preflight",
+      "status": "BLOCKED",
+      "description": "Docker daemon is not running (dockerd binary is present but no daemon).",
+      "why_not_resolved": "Starting a Docker daemon requires privileged container capabilities (cgroup/network namespace management) that this sandboxed environment does not expose, and the task explicitly forbids bypassing sandbox restrictions.",
+      "unblock_action": "Run on a host where Docker is fully available (e.g. a dedicated CI runner or developer machine), which would also unblock BLOCK-01 and BLOCK-02 via the project's own docker-compose.integration.yml."
+    }
+  ],
+  "explicitly_not_converted_to_pass": [
+    "Object Storage validation (Phase 3): remains NOT EXECUTED.",
+    "OIDC validation (Phase 4): remains NOT EXECUTED.",
+    "Alembic upgrade head from an empty database: remains FAIL - not converted to PASS. Only a separate, verified bootstrap path (fresh_install_postgresql.sh, which stamps rather than upgrades) is PASS."
+  ]
+}
