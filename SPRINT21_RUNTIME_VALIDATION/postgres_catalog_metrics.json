@@ -1,0 +1,40 @@
+{
+  "database": "PostgreSQL 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1), local system service, not Docker/container",
+  "method": "Applied PIOS_MVP_PostgreSQL_Schema_v1.4.sql then PIOS_MVP_PostgreSQL_Seed_v1.4.sql via psql to an isolated database, then queried pg_catalog/information_schema directly.",
+  "expected_baseline": {
+    "tables": 92,
+    "columns": 1305,
+    "indexes": 72,
+    "foreign_keys": 203,
+    "constraints": 374
+  },
+  "actual_result_final": {
+    "tables": 92,
+    "columns": 1305,
+    "indexes_explicit": 72,
+    "foreign_keys": 203,
+    "constraints_total": 374,
+    "status": "PASS - exact match on all five metrics"
+  },
+  "actual_result_before_verify_script_fix": {
+    "note": "The corrected verify_post_import.sql query definitions were required to reach the match above. The schema itself was already correct; the original queries in that file measured different things than the documented baseline.",
+    "indexes_pg_indexes_naive": 241,
+    "indexes_naive_breakdown": {"primary_key_backing_indexes": 92, "unique_constraint_backing_indexes": 77, "explicit_ix_indexes": 72, "sum": 241},
+    "constraints_information_schema_naive": 1347,
+    "constraints_naive_breakdown": {"primary_key": 92, "foreign_key": 203, "unique": 77, "check_real": 2, "check_synthetic_not_null_rows": 973, "sum": 1347}
+  },
+  "constraint_breakdown_authoritative_pg_constraint": {
+    "primary_keys": 92,
+    "foreign_keys": 203,
+    "unique_constraints": 77,
+    "check_constraints_real": 2,
+    "total": 374
+  },
+  "seed_row_counts": {
+    "standards": 41,
+    "measurable_elements": 266,
+    "nested_clauses": 63,
+    "documents": 75,
+    "matches_documented_baseline": true
+  }
+}

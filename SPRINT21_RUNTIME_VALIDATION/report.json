@@ -1,0 +1,70 @@
+{
+  "milestone": "Sprint 21 - Runtime Enablement & Infrastructure Validation, Phase: Runtime Validation",
+  "baseline": "Integration Candidate v1.7 (current repository state, authoritative)",
+  "generated_utc": "2026-08-02T05:30:00Z",
+  "environment": "sandboxed remote execution container; no Docker daemon; PostgreSQL 16 available as a pre-installed local system service (not Docker); MinIO and a real OIDC provider not installed",
+  "phase1_preflight": {
+    "docker_cli": "AVAILABLE (29.3.1)",
+    "docker_daemon": "BLOCKED - dockerd binary present but not running; starting it would require privileged container capabilities not available/appropriate in this sandbox. Not attempted.",
+    "docker_compose": "AVAILABLE as a CLI plugin (v5.1.1) but non-functional without a daemon",
+    "postgresql_server": "AVAILABLE - PostgreSQL 16.13, pre-installed local system service, started successfully",
+    "postgresql_client": "AVAILABLE - psql 16.13",
+    "minio_or_s3_compatible": "BLOCKED - not installed; not installed by this validation (would require installing a new service)",
+    "keycloak_or_oidc_provider": "BLOCKED - not installed; not installed by this validation (would require installing a new service, and no authorized institutional issuer exists regardless)",
+    "network_port_capability": "AVAILABLE - confirmed local port binding (tested 127.0.0.1:55432); outbound HTTPS via environment proxy"
+  },
+  "phase2_postgresql_validation": {
+    "schema_apply": {
+      "attempt_1": {"result": "FAIL", "errors": 6, "root_cause": "Duplicate UNIQUE constraint name uq_intelligence_review_items_session_id in app/models/entities.py's IntelligenceReviewItem (two constraints, same auto-generated name since naming convention keys off first column only), causing 3 tables (intelligence_review_items, committee_conflict_declarations, decision_quality_reviews) to fail creation via cascading FK/index errors"},
+      "fix_applied": "Added explicit distinct names to the two UniqueConstraint declarations; regenerated backend/sql/001_initial_schema.sql and PIOS_MVP_PostgreSQL_Schema_v1.4.sql via the existing scripts/export_postgres_ddl.py",
+      "attempt_2_final": {"result": "PASS", "errors": 0}
+    },
+    "seed_apply": {
+      "attempt_1": {"result": "FAIL", "errors": 650, "root_cause": "TimestampMixin.row_version is NOT NULL with only a Python-side SQLAlchemy default=1 (no server_default), so every raw INSERT in the exported seed SQL - which never lists row_version - violated the NOT NULL constraint on the very first statement (organizations), aborting the whole transaction and cascading 'transaction aborted' errors through all 650 remaining statements"},
+      "fix_applied": "Added server_default=text(\"1\") to TimestampMixin.row_version (same pattern already used for created_at/updated_at's server_default=func.now()); regenerated the exported schema files",
+      "attempt_2_final": {"result": "PASS", "errors": 0}
+    },
+    "alembic_upgrade_head_from_empty_db": {
+      "attempt_1": {"result": "FAIL", "error": "StringDataRightTruncation: value too long for character varying(32)", "revision_reached": "0006_sprint6_deployment_acceptance", "root_cause": "Alembic's default alembic_version.version_num column is VARCHAR(32); 7 of 13 revision id strings exceed 32 characters (up to 42)"},
+      "fix_applied": "migrations/env.py now pre-creates alembic_version with a VARCHAR(255) version_num column before Alembic's own checkfirst=True table creation runs. Does not rename any revision id or alter any migration file's content.",
+      "attempt_2": {"result": "FAIL", "error": "DuplicateTable: relation intelligence_review_sessions already exists", "revision_reached": "0011_sprint11_intelligence_to_action", "root_cause": "0001_initial creates ALL current Base.metadata tables via create_all() (previously flagged in the engineering audit). Migrations 0002-0010 consistently use raw 'CREATE TABLE IF NOT EXISTS' SQL, tolerant of that. Migrations 0011-0013 instead use Alembic's structured op.create_table() API (22 tables total), which has no automatic IF NOT EXISTS guard, so they collide with what 0001 already created."},
+      "final_status": "FAIL - not fixed. Fixing this requires editing migration 0011/0012/0013 content, which is explicitly out of scope per instruction not to alter historical migrations. See blocker_register.json.",
+      "conclusion": "The Alembic migration chain is NOT currently operational for a fresh installation. This is confirmed, reproducible, and root-caused precisely - not a hypothesis."
+    },
+    "verify_post_import_sql": {
+      "before_fix": {"tables": 92, "columns": 1305, "indexes": 241, "foreign_keys": 203, "constraints": 1347, "match_to_expected_baseline": "PARTIAL - tables/columns/foreign_keys matched, indexes and constraints did not"},
+      "root_cause": "The script's own indexes/constraints queries counted different things than the documented baseline comment: pg_indexes includes implicit PK/UNIQUE-backing indexes (92+77=169 extra); information_schema.table_constraints synthesizes one virtual CHECK-type row per NOT NULL column per the SQL standard (973 extra). Not a schema defect.",
+      "fix_applied": "Rewrote the indexes query to exclude indexes backing a named constraint, and the constraints/foreign_keys queries to use pg_constraint directly instead of information_schema.table_constraints.",
+      "after_fix": {"tables": 92, "columns": 1305, "indexes": 72, "foreign_keys": 203, "constraints": 374, "match_to_expected_baseline": "PASS - exact match on all five metrics"}
+    },
+    "test_suite_against_postgresql": {
+      "result": "PASS",
+      "tests": 81,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "note": "First time in this project's available history that the full suite has run against a real PostgreSQL server rather than SQLite. Uses Base.metadata.create_all() (SQLAlchemy Core), not the Alembic migration chain, and not the raw exported seed SQL - a third, independent code path from the two tested above."
+    },
+    "seed_row_count_spot_check": {"standards": 41, "measurable_elements": 266, "nested_clauses": 63, "documents": 75, "matches_documented_baseline": true}
+  },
+  "phase3_object_storage_validation": {
+    "status": "NOT EXECUTED - BLOCKED",
+    "reason": "No MinIO or other S3-compatible service is installed or running in this environment. Installing one was out of scope (would mean installing a new system service, not using what is already available)."
+  },
+  "phase4_oidc_validation": {
+    "status": "NOT EXECUTED - BLOCKED",
+    "reason": "No Keycloak or other real OIDC provider is installed or running in this environment, and no authorized institutional issuer/tenant exists regardless. Installing a throwaway OIDC provider was out of scope for the same reason as Phase 3."
+  },
+  "phase5_migration_integrity_assessment": {
+    "fresh_install_correctness": "FAIL - alembic upgrade head does not complete against an empty database (confirmed above, blocked at revision 0011)",
+    "incremental_migration_auditability": "COMPROMISED - 0001_initial creates the CURRENT schema via Base.metadata.create_all() rather than a fixed historical snapshot, so the migration history cannot be used to audit what changed at each sprint boundary",
+    "historical_reproducibility": "NOT POSSIBLE - there is no way to stand up the database as it actually existed after any single historical migration (e.g. 'just after Sprint 5'); running migrations 0001 through any point always yields the current full schema via 0001 alone",
+    "safe_forward_only_remediation_recommended": [
+      "Do not edit 0001_initial.py or any existing migration file.",
+      "Add a new migration (e.g. 0014_normalize_fresh_install_guard) that is a genuine no-op against any database that already has the full schema (checks table existence before acting), so both fresh installs and already-migrated databases converge safely - this does not fix historical auditability, only fresh-install correctness.",
+      "For migrations 0011-0013 specifically, a new forward migration could wrap equivalent CREATE TABLE IF NOT EXISTS logic for those 22 tables so a fresh install can pass through revision 0011 without modifying 0011's original content.",
+      "Widening alembic_version.version_num (already applied in migrations/env.py this validation) should be kept regardless of the above, since it is an independent, permanent defect unrelated to the 0001_initial design question.",
+      "Longer term and requiring explicit approval: a deliberate 'squash to a real 0001' rewrite, which the task's own rules for this validation pass explicitly forbid without separate authorization."
+    ]
+  }
+}

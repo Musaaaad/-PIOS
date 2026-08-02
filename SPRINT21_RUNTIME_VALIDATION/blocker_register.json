@@ -1,0 +1,41 @@
+{
+  "blockers": [
+    {
+      "id": "BLOCK-01",
+      "phase": "3 - Object Storage Validation",
+      "status": "BLOCKED",
+      "description": "No MinIO or other S3-compatible object storage service is installed or running in this environment.",
+      "why_not_resolved": "Installing MinIO would mean installing a new system service, which is out of scope for this validation pass (instructed to use what is already available, not build new infrastructure).",
+      "unblock_action": "Run on a host with Docker (to use the project's own integration_v1.7/docker-compose.integration.yml) or with MinIO already installed."
+    },
+    {
+      "id": "BLOCK-02",
+      "phase": "4 - OIDC Validation",
+      "status": "BLOCKED",
+      "description": "No Keycloak or other real OIDC provider is installed or running in this environment.",
+      "why_not_resolved": "Same reasoning as BLOCK-01, plus: even if a throwaway OIDC provider were stood up, the task rules explicitly forbid using institutional production identities or secrets, and no authorized institutional issuer exists to test against regardless.",
+      "unblock_action": "Deploy the authored deploy/keycloak/pios-realm.json to a real Keycloak instance, or connect to an authorized institutional OIDC issuer/tenant."
+    },
+    {
+      "id": "BLOCK-03",
+      "phase": "2 - PostgreSQL Validation (Alembic chain)",
+      "status": "FAIL - open, not a BLOCKED-for-infrastructure-reasons item",
+      "description": "alembic upgrade head does not complete against a fresh/empty PostgreSQL database. It fails at revision 0011_sprint11_intelligence_to_action with DuplicateTable, because that migration (and 0012, 0013) use Alembic's structured op.create_table() API with no IF NOT EXISTS guard, and collide with the full current schema that 0001_initial already created via Base.metadata.create_all().",
+      "why_not_resolved": "Fixing this requires editing the content of migrations 0011-0013 (adding existence guards) or restructuring 0001_initial, both of which are historical migration files this validation pass is explicitly instructed not to alter without separate approval.",
+      "unblock_action": "See phase5_migration_integrity_assessment.safe_forward_only_remediation_recommended in report.json. Requires an explicit decision and approval from the project owner before any migration file is touched."
+    },
+    {
+      "id": "BLOCK-04",
+      "phase": "1 - Preflight",
+      "status": "BLOCKED",
+      "description": "Docker daemon is not running (dockerd binary is present but no daemon).",
+      "why_not_resolved": "Starting a Docker daemon requires privileged container capabilities (cgroup/network namespace management) that this sandboxed environment does not expose, and the task explicitly forbids bypassing sandbox restrictions.",
+      "unblock_action": "Run on a host where Docker is fully available (e.g. a dedicated CI runner or developer machine), which would also unblock BLOCK-01 and BLOCK-02 via the project's own docker-compose.integration.yml."
+    }
+  ],
+  "explicitly_not_converted_to_pass": [
+    "Object Storage validation (Phase 3): remains NOT EXECUTED.",
+    "OIDC validation (Phase 4): remains NOT EXECUTED.",
+    "Alembic fresh-install upgrade head: remains FAIL."
+  ]
+}

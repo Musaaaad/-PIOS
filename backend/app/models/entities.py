@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index,
-    Integer, Float, String, Text, UniqueConstraint, func
+    Integer, Float, String, Text, UniqueConstraint, func, text
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,7 +21,7 @@ def uuid_pk() -> Mapped[uuid.UUID]:
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-    row_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    row_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
 
 
 class Organization(Base, TimestampMixin):
@@ -1269,8 +1269,8 @@ class IntelligenceReviewSession(Base, TimestampMixin):
 class IntelligenceReviewItem(Base, TimestampMixin):
     __tablename__ = "intelligence_review_items"
     __table_args__ = (
-        UniqueConstraint("session_id", "recommendation_id"),
-        UniqueConstraint("session_id", "sequence"),
+        UniqueConstraint("session_id", "recommendation_id", name="uq_intelligence_review_items_session_recommendation"),
+        UniqueConstraint("session_id", "sequence", name="uq_intelligence_review_items_session_sequence"),
         Index("ix_intelligence_review_item_session_status", "session_id", "status"),
     )
     id: Mapped[uuid.UUID] = uuid_pk()
