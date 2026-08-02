@@ -1,11 +1,22 @@
 import json
 import os
+import tempfile
 from pathlib import Path
 import pytest
 
 os.environ["PIOS_ENV"] = "test"
 os.environ["PIOS_DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
 os.environ["PIOS_ALLOW_DEV_TOKENS"] = "true"
+
+# Isolate every filesystem root the app can write to during tests so a test
+# run never mutates the committed evidence/report artifacts under backend/var/.
+_TEST_VAR_ROOT = Path(tempfile.mkdtemp(prefix="pios_test_var_"))
+os.environ["PIOS_OBJECT_STORAGE_ROOT"] = str(_TEST_VAR_ROOT / "evidence")
+os.environ["PIOS_EXPORT_STORAGE_ROOT"] = str(_TEST_VAR_ROOT / "exports")
+os.environ["PIOS_BACKUP_STORAGE_ROOT"] = str(_TEST_VAR_ROOT / "backups")
+os.environ["PIOS_DEPLOYMENT_REPORT_ROOT"] = str(_TEST_VAR_ROOT / "deployment-reports")
+os.environ["PIOS_BASELINE_RELEASE_ROOT"] = str(_TEST_VAR_ROOT / "baseline-releases")
+os.environ["PIOS_GOVERNANCE_EXPORT_ROOT"] = str(_TEST_VAR_ROOT / "governance-exports")
 
 from fastapi.testclient import TestClient
 from app.db.base import Base
