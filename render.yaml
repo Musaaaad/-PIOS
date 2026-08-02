@@ -1,0 +1,127 @@
+# Render Blueprint for the PIOS full stack.
+#
+# Creates a managed PostgreSQL 16 database, the FastAPI backend (from the
+# existing backend/Dockerfile), and the static frontend. Applying this in
+# Render is a one-time action performed by an account owner; thereafter
+# .github/workflows/deploy-production.yml redeploys on every push to main.
+#
+# Free-plan caveat worth knowing before you rely on this: Render free web
+# services are suspended after inactivity and cold-start on the next request,
+# and free PostgreSQL instances expire after 30 days. For anything beyond a
+# demonstration, move both to a paid plan.
+#
+# No secret values appear in this file. Database credentials are injected by
+# Render from the managed instance; everything else is either non-sensitive or
+# marked sync:false so it must be set in the Render dashboard.
+
+databases:
+  - name: pios-db
+    databaseName: pios
+    user: pios
+    plan: free
+    postgresMajorVersion: "16"
+    ipAllowList: []          # private network only; no public database access
+
+services:
+  # ---------------------------------------------------------------- backend --
+  - type: web
+    name: pios-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: ./scripts/render_entrypoint.sh
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PIOS_DATABASE_URL
+        fromDatabase:
+          name: pios-db
+          property: connectionString
+      - key: PIOS_ENV
+        value: production
+      # Production posture: OIDC only, development tokens refused outright.
+      # app/core/security.py additionally hard-blocks dev tokens whenever
+      # PIOS_ENV=production, so this is defence in depth rather than the only
+      # control.
+      - key: PIOS_AUTH_MODE
+        value: oidc
+      - key: PIOS_ALLOW_DEV_TOKENS
+        value: "false"
+      - key: PIOS_LOG_LEVEL
+        value: INFO
+      - key: PIOS_RELEASE_VERSION
+        value: 1.4.0
+      - key: PIOS_TLS_ENABLED
+        value: "true"
+      - key: PIOS_OBJECT_STORAGE_BACKEND
+        value: local
+      - key: PIOS_OBJECT_STORAGE_ROOT
+        value: /app/var/evidence
+      - key: PIOS_EXPORT_STORAGE_ROOT
+        value: /app/var/exports
+      # Restrict browser access to the deployed frontend origin. Set this in
+      # the Render dashboard once the frontend URL is known.
+      - key: PIOS_CORS_ORIGINS
+        sync: false
+      # Institutional OIDC. Left unset here on purpose: these must be supplied
+      # by whoever owns the identity provider, never committed to the repo.
+      # Until they are set the API will reject all authentication, which is the
+      # correct failure mode for a production deployment.
+      - key: PIOS_OIDC_ISSUER
+        sync: false
+      - key: PIOS_OIDC_AUDIENCE
+        sync: false
+      - key: PIOS_OIDC_JWKS_URL
+        sync: false
+
+  # --------------------------------------------------------------- frontend --
+  - type: web
+    name: pios-frontend
+    runtime: static
+    plan: free
+    branch: main
+    buildCommand: |
+      set -eu
+      mkdir -p dist
+      cp -r frontend/. dist/
+      rm -rf dist/tests dist/Dockerfile dist/nginx.conf dist/MANIFEST.txt
+      # Generated at build time; the committed frontend/config.js is untouched.
+      # defaultToken is emptied - the source default is a development token and
+      # must not be published.
+      cat > dist/config.js <<EOF
+      window.PIOS_CONFIG = {
+        apiBase: "${PIOS_API_BASE_URL:-}",
+        demoMode: ${PIOS_DEMO_MODE:-false},
+        defaultToken: "",
+        refreshSeconds: 60,
+        appVersion: "1.0.0"
+      };
+      EOF
+    staticPublishPath: ./dist
+    autoDeploy: true
+    envVars:
+      # Set to the pios-api service URL, e.g. https://pios-api.onrender.com/api/v1
+      - key: PIOS_API_BASE_URL
+        sync: false
+      - key: PIOS_DEMO_MODE
+        value: "false"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; connect-src 'self' https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'self'; form-action 'none'"

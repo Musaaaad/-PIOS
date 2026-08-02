@@ -1,0 +1,180 @@
+name: Deploy Production (Render)
+
+# Full-stack production deployment: FastAPI backend + PostgreSQL + frontend.
+#
+# Unlike deploy-pages.yml, this workflow REQUIRES an external hosting account
+# and repository secrets, because a live API and database cannot run on GitHub
+# Pages. See docs/DEPLOYMENT_PIPELINE.md for the exact one-time setup.
+#
+# If the required secrets are absent the workflow does not fail the build. It
+# reports precisely what is missing and stops, so that a repository without a
+# hosting account configured still has a green pipeline instead of a permanently
+# red one that everybody learns to ignore.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_verification:
+        description: 'Deploy without running post-deploy verification (not recommended)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false      # never interrupt an in-flight production deploy
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_API_SERVICE_ID: ${{ secrets.RENDER_API_SERVICE_ID }}
+        run: |
+          missing=""
+          [ -z "$RENDER_API_KEY" ]        && missing="$missing RENDER_API_KEY"
+          [ -z "$RENDER_API_SERVICE_ID" ] && missing="$missing RENDER_API_SERVICE_ID"
+
+          if [ -n "$missing" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Production deployment skipped"
+              echo ""
+              echo "Missing required repository secrets:**$missing**"
+              echo ""
+              echo "This is expected until a hosting account is connected."
+              echo "See \`docs/DEPLOYMENT_PIPELINE.md\` for the one-time setup."
+              echo ""
+              echo "The frontend is still published independently by the"
+              echo "**Deploy Frontend (GitHub Pages)** workflow, which needs no secrets."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Production deploy skipped - missing secrets:$missing"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: preflight
+    if: needs.preflight.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.resolve.outputs.api_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Resolve service URL
+        id: resolve
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ secrets.RENDER_API_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          url=$(curl -fsS \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Accept: application/json" \
+            "https://api.render.com/v1/services/$SERVICE_ID" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('serviceDetails',{}).get('url',''))")
+          if [ -z "$url" ]; then
+            echo "::error::Could not resolve the service URL from the Render API."
+            exit 1
+          fi
+          echo "api_url=$url" >> "$GITHUB_OUTPUT"
+          echo "Resolved API URL: $url"
+
+      - name: Trigger deploy
+        id: trigger
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ secrets.RENDER_API_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          deploy_id=$(curl -fsS -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}' \
+            "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "deploy_id=$deploy_id" >> "$GITHUB_OUTPUT"
+          echo "Triggered deploy $deploy_id for commit ${GITHUB_SHA:0:7}"
+
+      - name: Wait for deploy to go live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ secrets.RENDER_API_SERVICE_ID }}
+          DEPLOY_ID: ${{ steps.trigger.outputs.deploy_id }}
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + 1500 ))   # 25 minutes
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            status=$(curl -fsS \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Accept: application/json" \
+              "https://api.render.com/v1/services/$SERVICE_ID/deploys/$DEPLOY_ID" \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))")
+            echo "deploy status: $status"
+            case "$status" in
+              live)
+                echo "Deploy is live."
+                exit 0 ;;
+              build_failed|update_failed|canceled|deactivated)
+                echo "::error::Deploy finished in non-live state: $status"
+                exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Timed out after 25 minutes waiting for the deploy to go live."
+          exit 1
+
+      - name: Verify the live deployment
+        if: ${{ !inputs.skip_verification }}
+        run: |
+          python deploy/verify_deployment.py \
+            --api-url "${{ steps.resolve.outputs.api_url }}" \
+            --expect-version "1.4.0" \
+            --timeout 300 \
+            --report production-verification.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-verification-report
+          path: production-verification.json
+
+      - name: Publish the live URL
+        run: |
+          {
+            echo "## PIOS production deployment"
+            echo ""
+            echo "**API URL:** ${{ steps.resolve.outputs.api_url }}"
+            echo ""
+            echo "| Endpoint | Purpose |"
+            echo "|---|---|"
+            echo "| \`/health\` | liveness |"
+            echo "| \`/ready\` | readiness, includes database reachability |"
+            echo "| \`/docs\` | interactive API documentation |"
+            echo ""
+            echo "Commit: \`${GITHUB_SHA:0:7}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  report-skipped:
+    needs: preflight
+    if: needs.preflight.outputs.configured == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Production hosting is not configured yet; nothing to deploy."
+          echo "This job exists so the pipeline reports a clear, green, explained"
+          echo "state rather than a misleading failure."

@@ -6,6 +6,10 @@ COPY migrations ./migrations
 COPY alembic.ini ./
 COPY scripts ./scripts
 COPY seeds ./seeds
-RUN pip install --no-cache-dir .
+# Verified schema/seed SQL, required by scripts/bootstrap_db.py for first-boot
+# database provisioning on managed platforms.
+COPY sql ./sql
+RUN pip install --no-cache-dir . \
+    && chmod +x ./scripts/render_entrypoint.sh
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

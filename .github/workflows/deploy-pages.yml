@@ -1,0 +1,153 @@
+name: Deploy Frontend (GitHub Pages)
+
+# Publishes the static PIOS frontend to GitHub Pages on every push to main.
+#
+# This is the zero-dependency deployment path: it needs no external hosting
+# account and no repository secrets, because it runs entirely on GitHub's own
+# infrastructure. It produces a public HTTPS URL that works in mobile Safari.
+#
+# Scope, stated plainly: this deploys the FRONTEND ONLY. GitHub Pages serves
+# static files and cannot run the FastAPI backend or PostgreSQL. With no
+# reachable API the app runs in its built-in demo mode, which displays clearly
+# labelled synthetic data. For the full stack see deploy-production.yml.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-pages.yml'
+      - 'deploy/verify_deployment.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two Pages deploys at once; let a newer commit supersede an
+# in-flight one rather than racing it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate frontend before publishing
+        run: |
+          cd frontend
+          # Same static/syntax/a11y/RTL checks CI runs. A broken bundle must
+          # never reach a public URL.
+          ./tests/js_syntax_check.sh
+
+      - name: Stage site and generate production config
+        env:
+          # Optional. Set as a repository *variable* (Settings -> Secrets and
+          # variables -> Actions -> Variables), not a secret - it is a public
+          # URL, not a credential. Leave unset for demo-only mode.
+          PIOS_API_BASE_URL: ${{ vars.PIOS_API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp -r frontend/. _site/
+          rm -rf _site/tests _site/Dockerfile _site/nginx.conf _site/MANIFEST.txt
+
+          API_BASE="${PIOS_API_BASE_URL:-}"
+          if [ -n "$API_BASE" ]; then
+            DEMO=false
+            echo "Building against API: $API_BASE"
+          else
+            DEMO=true
+            echo "No PIOS_API_BASE_URL set - building in demo mode (no backend)."
+          fi
+
+          # Generated at build time; the committed frontend/config.js is never
+          # modified. defaultToken is deliberately emptied: the source default
+          # is a development token and must never be published to a public URL.
+          cat > _site/config.js <<EOF
+          window.PIOS_CONFIG = {
+            apiBase: "${API_BASE}",
+            demoMode: ${DEMO},
+            defaultToken: "",
+            refreshSeconds: 60,
+            appVersion: "1.0.0"
+          };
+          EOF
+
+          # Pages serves no custom headers, so carry the CSP/security headers
+          # from nginx.conf into a meta tag rather than dropping them entirely.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("_site/index.html")
+          html = p.read_text(encoding="utf-8")
+          csp = ("<meta http-equiv=\"Content-Security-Policy\" content=\""
+                 "default-src 'self'; connect-src 'self' https:; "
+                 "style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
+                 "img-src 'self' data:; base-uri 'self'; form-action 'none'\">\n  ")
+          marker = '<meta name="viewport"'
+          assert marker in html, "index.html layout changed; CSP injection point not found"
+          p.write_text(html.replace(marker, csp + marker, 1), encoding="utf-8")
+          print("CSP meta tag injected")
+          PY
+
+          touch _site/.nojekyll
+          ls -la _site
+
+      - uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on automatically the first time this runs, so no manual
+          # repository setting change is needed.
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify the live deployment
+        run: |
+          python deploy/verify_deployment.py \
+            --frontend-url "${{ steps.deployment.outputs.page_url }}" \
+            --timeout 300 \
+            --report pages-verification.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pages-verification-report
+          path: pages-verification.json
+
+      - name: Publish the live URL
+        run: |
+          {
+            echo "## PIOS frontend deployed"
+            echo ""
+            echo "**Live URL:** ${{ steps.deployment.outputs.page_url }}"
+            echo ""
+            echo "Public HTTPS, works in mobile Safari."
+            if [ -z "${{ vars.PIOS_API_BASE_URL }}" ]; then
+              echo ""
+              echo "> Running in **demo mode** - no backend API is configured, so the"
+              echo "> app displays clearly labelled synthetic data. Set the"
+              echo "> \`PIOS_API_BASE_URL\` repository variable to point it at a live API."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
