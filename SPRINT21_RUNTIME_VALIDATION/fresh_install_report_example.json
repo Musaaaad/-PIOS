@@ -1,0 +1,26 @@
+{
+  "generated_utc": "2026-08-02T05:54:46.173333+00:00",
+  "status": "SUCCESS",
+  "stopped_at_stage": null,
+  "reason": null,
+  "catalog_metrics": {
+    "tables": 92,
+    "columns": 1305,
+    "indexes": 72,
+    "foreign_keys": 203,
+    "constraints": 374
+  },
+  "catalog_metrics_expected": {
+    "tables": 92,
+    "columns": 1305,
+    "indexes": 72,
+    "foreign_keys": 203,
+    "constraints": 374
+  },
+  "test_suite": {
+    "total": 81,
+    "passed": 81,
+    "failed": 0
+  },
+  "alembic_stamped_head": true
+}

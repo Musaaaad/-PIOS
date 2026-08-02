@@ -33,6 +33,13 @@ def run_migrations_online():
             "version_num VARCHAR(255) NOT NULL, "
             "CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
         )
+        # Commit this DDL on its own transaction. Without this, the implicit
+        # transaction SQLAlchemy 2.0 opens on the first exec_driver_sql() call
+        # is left uncommitted, and the connection's __exit__ rolls it back
+        # silently when the alembic_version table creation is the ONLY change
+        # made this run (e.g. `alembic stamp`, which does not otherwise write
+        # anything) - Alembic then appears to succeed while persisting nothing.
+        connection.commit()
         context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
         with context.begin_transaction():
             context.run_migrations()
