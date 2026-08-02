@@ -19,6 +19,10 @@ databases:
     databaseName: pios
     user: pios
     plan: free
+    # MUST match the region of pios-api below. Render's internal connection
+    # string only resolves within a region, so a Frankfurt service cannot reach
+    # an Oregon database - and omitting this key silently defaults to Oregon.
+    region: frankfurt
     postgresMajorVersion: "16"
     ipAllowList: []          # private network only; no public database access
 
@@ -78,10 +82,15 @@ services:
         sync: false
 
   # --------------------------------------------------------------- frontend --
+  # Optional. The primary frontend is already live on GitHub Pages
+  # (https://musaaaad.github.io/-PIOS/) via .github/workflows/deploy-pages.yml.
+  # This service is kept as a same-origin alternative that avoids cross-origin
+  # calls entirely; delete it from this blueprint if you only want Pages.
+  # Note: Render static sites take no `plan` key - they are always free, and
+  # supplying one fails blueprint validation.
   - type: web
     name: pios-frontend
     runtime: static
-    plan: free
     branch: main
     buildCommand: |
       set -eu
