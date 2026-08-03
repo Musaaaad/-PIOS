@@ -55,7 +55,41 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [x.strip() for x in self.cors_origins.split(",") if x.strip()]
+        """Resolved CORS origins, normalised.
+
+        An Origin header is a bare scheme://host[:port] - never a path and
+        never a trailing slash - and CORSMiddleware compares it literally. A
+        configured value of "https://app.example.com/" therefore matches
+        nothing and every browser request fails, so trailing slashes and
+        surrounding whitespace are stripped rather than silently breaking CORS.
+        Invalid entries are dropped here and reported by
+        cors_origin_problems() so startup can surface them.
+        """
+        resolved: list[str] = []
+        for raw in self.cors_origins.split(","):
+            value = raw.strip()
+            if not value:
+                continue
+            if value == "*":
+                resolved.append(value)
+                continue
+            value = value.rstrip("/")
+            if not value.startswith(("http://", "https://")):
+                continue
+            if value not in resolved:
+                resolved.append(value)
+        return resolved
+
+    def cors_origin_problems(self) -> list[str]:
+        """Configured entries that were rejected, for visible startup reporting."""
+        problems: list[str] = []
+        for raw in self.cors_origins.split(","):
+            value = raw.strip()
+            if not value or value == "*":
+                continue
+            if not value.rstrip("/").startswith(("http://", "https://")):
+                problems.append(value)
+        return problems
 
     @property
     def oidc_algorithm_list(self) -> list[str]:
