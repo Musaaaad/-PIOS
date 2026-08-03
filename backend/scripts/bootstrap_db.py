@@ -129,6 +129,23 @@ def apply_sql_file(conn: psycopg.Connection, path: Path, label: str) -> None:
     log(f"{label} applied")
 
 
+# Keycloak shares this database on Render's free tier (only one free PostgreSQL
+# instance is allowed per account) and is isolated in its own schema. Keycloak's
+# Liquibase migrations populate a schema but will not create it, so it must
+# already exist. Creating it here is safe and idempotent: everything PIOS counts
+# and verifies is scoped to `public`, so a populated `keycloak` schema cannot
+# affect the 92/1305/72/203/374 baseline or the emptiness check.
+KEYCLOAK_SCHEMA = os.environ.get("PIOS_KEYCLOAK_SCHEMA", "keycloak")
+
+
+def ensure_keycloak_schema(conn: psycopg.Connection) -> None:
+    if not KEYCLOAK_SCHEMA:
+        return
+    with conn.cursor() as cur:
+        cur.execute(f'CREATE SCHEMA IF NOT EXISTS "{KEYCLOAK_SCHEMA}"')
+    log(f"identity provider schema ready: {KEYCLOAK_SCHEMA}")
+
+
 def main() -> int:
     raw = os.environ.get("PIOS_DATABASE_URL") or os.environ.get("DATABASE_URL")
     if not raw:
@@ -144,6 +161,8 @@ def main() -> int:
             )
             row = cur.fetchone()
             existing = int(row[0]) if row else 0
+
+        ensure_keycloak_schema(conn)
 
         if existing:
             log(f"database already initialised ({existing} tables present); verifying only")

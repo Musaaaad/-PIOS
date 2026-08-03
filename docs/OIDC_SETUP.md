@@ -70,12 +70,39 @@ These are **derived from the realm and service names**, not invented:
 6. "تسجيل الخروج" clears local tokens **and** ends the Keycloak session with
    `id_token_hint`.
 
+## Database: one instance, two schemas
+
+Render's free tier allows **one** PostgreSQL instance per account — attempting a
+second fails with `cannot have more than one active free tier database`. Keycloak
+therefore shares `pios-db` and is isolated by **schema**, not by database:
+
+| Schema | Owner | Contents |
+|---|---|---|
+| `public` | PIOS | the 92 application tables |
+| `keycloak` | Keycloak | roughly 95 identity tables |
+
+This matters more than it first appears. Every count in
+`backend/scripts/bootstrap_db.py` — the emptiness check and the
+92/1305/72/203/374 verification — is scoped to `public`. Had Keycloak been left
+in `public`, its tables would have made the database look non-empty on first
+boot (skipping provisioning) and then failed catalog verification on every
+redeploy. Verified by populating a `keycloak` schema with 95 tables and
+confirming the PIOS counts are unchanged.
+
+Keycloak's Liquibase migrations populate a schema but do **not** create it, so
+`bootstrap_db.py` creates it (idempotently). Consequence: **pios-api must start
+successfully once before Keycloak can complete its first start.** Render restarts
+a failed service automatically, so this resolves itself — it is not a manual
+step, but it does explain a first-deploy Keycloak failure.
+
 ## Free-plan reality
 
 Keycloak on Render's free tier (512 MB, sleeps when idle) will cold-start
-slowly — expect tens of seconds on the first sign-in after inactivity. Free
-PostgreSQL instances also expire after 30 days. **For a real institutional
-pilot, move `pios-keycloak` and both databases to a paid plan.** This is a
+slowly — expect tens of seconds on the first sign-in after inactivity. The free
+PostgreSQL instance also expires after 30 days, and it now carries both PIOS and
+Keycloak data. **For a real institutional pilot, move `pios-keycloak` and the
+database to a paid plan** — at which point Keycloak should be given its own
+instance rather than a shared schema. This is a
 capacity statement, not a compliance one.
 
 ## What is NOT claimed
