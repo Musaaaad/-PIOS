@@ -8,10 +8,44 @@
   const t=(ar,en)=>state.lang==='ar'?ar:en;
   const nav=[['dashboard','◫','لوحة التشغيل','Operations'],['worklist','☑','قائمة عملي','My Worklist'],['readiness','◉','الجاهزية وESR','Readiness & ESR'],['evidence','▣','الأدلة','Evidence'],['findings','⚠','Findings وCAPA','Findings & CAPA'],['documents','▤','الوثائق','Documents'],['exports','⇩','مركز التصدير','Export Center'],['pilot','◆','مركز التجربة','Pilot Center'],['deployment','⬡','قبول النشر','Deployment Acceptance'],['operations','◎','مركز التشغيل','Command Center'],['assurance','↻','الضمان المستمر','Continuous Assurance'],['intelligence','✦','الذكاء والمخاطر','Intelligence & Risk'],['actions','➜','من الذكاء إلى العمل','Intelligence to Action'],['committee','♙','اللجنة وجودة القرار','Committee & Decision Quality'],['institutional-pilot','◒','التجربة المؤسسية','Institutional Pilot'],['governance','◈','الحوكمة والإصدارات','Governance & Releases'],['security','⌾','الهوية والتشغيل','Identity & Runtime']];
   const liveApiConfigured=()=>C.demoMode!==true&&!!C.apiBase;
-  const api=async(path,opts={})=>{if(!liveApiConfigured()) throw Object.assign(new Error('demo'),{demo:true}); const headers={'Content-Type':'application/json',...opts.headers}; if(state.token) headers['Authorization']=`Bearer ${state.token}`; const r=await fetch(C.apiBase+path,{...opts,headers}); if(!r.ok){const body=await r.json().catch(()=>({})); throw Object.assign(new Error(body.detail||r.statusText||'Request failed'),{status:r.status});} return r.headers.get('content-type')?.includes('json')?r.json():r.blob()};
-  function apiErrorText(e){if(e&&e.demo) return t('وضع العرض التجريبي مفعّل: لا يوجد اتصال بالخادم.','Demo mode is active: no backend connection.'); const s=e&&e.status?` (HTTP ${e.status})`:''; const detail=e&&e.message?e.message:'unknown'; return t(`تعذّر تنفيذ الطلب${s}: ${detail}`,`Request failed${s}: ${detail}`)}
+  const api=async(path,opts={})=>{if(!liveApiConfigured()) throw Object.assign(new Error('demo'),{demo:true}); const headers={'Content-Type':'application/json',...opts.headers}; if(state.token) headers['Authorization']=`Bearer ${state.token}`; const url=C.apiBase+path; let r; try{r=await fetch(url,{...opts,headers})}catch(err){throw Object.assign(new Error(err&&err.message?err.message:'network failure'),{network:true,url})} if(!r.ok){const body=await r.json().catch(()=>({})); throw Object.assign(new Error(body.detail||r.statusText||'Request failed'),{status:r.status,url,body});} return r.headers.get('content-type')?.includes('json')?r.json():r.blob()};
+  // Distinguishes the four cases the user can actually act on: demo mode, a
+  // network/CORS failure with NO HTTP response, an auth failure, and a real
+  // HTTP error. "Load failed"/"Failed to fetch" with no status is always the
+  // second: the browser blocked or could not complete the request, so the
+  // status code the user asks for genuinely does not exist.
+  function apiErrorText(e){
+    if(e&&e.demo) return t('وضع العرض التجريبي مفعّل: لا يوجد اتصال بالخادم.','Demo mode is active: no backend connection.');
+    if(e&&e.network) return t(`فشل الاتصال بالخادم قبل وصول أي استجابة HTTP (${e.message}). السبب الغالب: حجب CORS — يجب ضبط PIOS_CORS_ORIGINS على الواجهة الخلفية ليشمل ${location.origin} — أو تعذّر الوصول للشبكة/الشهادة.`,`Network failure before any HTTP response (${e.message}). Most likely CORS: the backend's PIOS_CORS_ORIGINS must include ${location.origin}. Otherwise DNS/TLS/offline.`);
+    const st=e&&e.status;
+    if(st===401||st===403) return t(`الطلب مرفوض (HTTP ${st}): يلزم تسجيل الدخول عبر OIDC. لم يتم ضبط هوية مؤسسية بعد.`,`Rejected (HTTP ${st}): OIDC sign-in required. No institutional identity is configured yet.`);
+    const s=st?` (HTTP ${st})`:'';
+    const detail=e&&e.message?e.message:'unknown';
+    return t(`تعذّر تنفيذ الطلب${s}: ${detail}`,`Request failed${s}: ${detail}`)
+  }
   function showError(e){const msg=apiErrorText(e);const box=$('#pageError');if(box){box.textContent=msg;box.hidden=false}toast(msg);return msg}
   function clearError(){const box=$('#pageError');if(box){box.hidden=true;box.textContent=''}}
+  // Every interactive control bound to real behaviour is tagged here. Anything
+  // left untagged inside #main is disabled with a visible Arabic reason by
+  // markUnwiredControls(), so a control either works or explains itself. A
+  // button that silently does nothing is treated as a defect, not a feature.
+  function markWired(el){if(el)el.dataset.wired='1';return el}
+  function wire(sel,handler,all=true){const els=all?[...document.querySelectorAll(sel)]:[$(sel)].filter(Boolean);els.forEach(el=>{markWired(el);el.addEventListener('click',ev=>handler(ev,el))});return els.length}
+  function markUnwiredControls(){
+    const reason=t('غير مُفعّل في هذا الإصدار: لا يوجد ربط بنقطة نهاية في الواجهة الخلفية بعد.','Not implemented in this release: no backend endpoint is wired yet.');
+    document.querySelectorAll('#main button, #main .filter').forEach(el=>{
+      if(el.dataset.wired==='1')return;
+      // Controls carrying an inline onclick (e.g. the dashboard "عرض الكل"
+      // shortcut, which just changes the hash) already work. Treat them as
+      // wired rather than disabling working navigation.
+      // Check the attribute as well as the property: jsdom in outside-only mode
+      // does not compile inline handlers, so the property alone would disagree
+      // between the test environment and a real browser.
+      if(el.hasAttribute('onclick')||typeof el.onclick==='function'){el.dataset.wired='1';return}
+      el.disabled=true;el.classList.add('not-wired');el.setAttribute('aria-disabled','true');
+      if(!el.title)el.title=reason;
+    });
+  }
   function toast(msg){const e=$('#toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200)}
   function route(){return (location.hash.replace(/^#\/?/,'').split('/')[0]||'dashboard')}
   function setDir(){document.documentElement.lang=state.lang;document.documentElement.dir=state.lang==='ar'?'rtl':'ltr';$('#langBtn').textContent=state.lang==='ar'?'EN':'ع';}
@@ -54,7 +88,7 @@
   const renderers={dashboard,worklist,readiness,evidence,findings,documents,exports,pilot,deployment,operations,assurance,intelligence,actions,committee,institutionalPilot,'institutional-pilot':institutionalPilot,governance,security};
   function render(){setDir();renderNav();$('#version').textContent=C.appVersion||'0.1.0';$('#userName').textContent=state.identity?.display_name||t('مستخدم المنصة','PIOS User');$('#userRole').textContent=(state.identity?.roles||[])[0]||'';$('#alertBadge').textContent=state.notifications.length;$('#demoNotice').hidden=!state.demo;$('#demoNotice').textContent=state.demo?(state.demoReason?`${D.notice} — ${state.demoReason}`:D.notice):'';$('#main').innerHTML=(renderers[route()]||dashboard)();renderAlerts();bindPage()}
   function renderAlerts(){$('#alertsList').innerHTML=state.notifications.length?state.notifications.map(n=>`<article class="notice ${n.severity}"><div class="section-title"><strong>${esc(n.title)}</strong>${pill(n.severity)}</div><p>${esc(n.message)}</p><button class="btn secondary" onclick="location.hash='${esc(n.action_url||'#/dashboard')}'">${t('فتح','Open')}</button></article>`).join(''):`<div class="empty">${t('لا توجد تنبيهات','No alerts')}</div>`}
-  function bindPage(){$('#refreshWork')?.addEventListener('click',load);$('#calcBtn')?.addEventListener('click',calculateSnapshot);document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});document.querySelectorAll('.open-standard[data-standard]').forEach(b=>b.onclick=()=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}});$('#saveToken')?.addEventListener('click',()=>{state.token=$('#tokenInput').value;storage.set('pios-token',state.token);toast(t('تم حفظ الرمز محليًا','Token saved locally'))})}
+  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});markWired($('#saveToken'));$('#saveToken')?.addEventListener('click',()=>{state.token=$('#tokenInput').value;storage.set('pios-token',state.token);toast(t('تم حفظ الرمز محليًا','Token saved locally'))});markUnwiredControls()}
   $('#alertsBtn').onclick=()=>{$('#alertDrawer').classList.add('open');$('#alertDrawer').setAttribute('aria-hidden','false')};$('#closeDrawer').onclick=()=>{$('#alertDrawer').classList.remove('open');$('#alertDrawer').setAttribute('aria-hidden','true')};$('#refreshBtn').onclick=load;$('#langBtn').onclick=()=>{state.lang=state.lang==='ar'?'en':'ar';storage.set('pios-lang',state.lang);render()};$('#demoBtn').onclick=()=>{state.demo=!state.demo;load()};$('#menuBtn').onclick=()=>toggleSidebar();
   $('#navBackdrop')?.addEventListener('click',closeSidebar);
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSidebar();$('#alertDrawer')?.classList.remove('open');$('#alertDrawer')?.setAttribute('aria-hidden','true')}});

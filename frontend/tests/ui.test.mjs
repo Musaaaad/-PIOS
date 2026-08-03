@@ -265,7 +265,8 @@ describe('API errors are visible, never silent', () => {
     const box = doc.getElementById('pageError');
     assert.equal(box.hidden, false, 'an error box must be shown');
     assert.match(box.textContent, /HTTP 401/, 'the HTTP status must be surfaced');
-    assert.match(box.textContent, /تعذّر تنفيذ الطلب/, 'the message must be in Arabic');
+    assert.match(box.textContent, /الطلب مرفوض/, 'a 401 must be named in Arabic as a rejection');
+    assert.match(box.textContent, /OIDC/, 'a 401 must name the missing prerequisite');
   });
 
   test('failed standard open reports the status instead of doing nothing', async () => {
@@ -282,6 +283,25 @@ describe('API errors are visible, never silent', () => {
     assert.match(box.textContent, /HTTP 500/);
   });
 
+  test('a network/CORS failure is reported as such, NOT as a bare "Load failed"', async () => {
+    // Safari raises TypeError("Load failed") when CORS blocks the request, so
+    // there is no HTTP status at all. The message must say that and name the
+    // fix, rather than echoing an opaque browser string.
+    const { doc } = await boot({ routes: HAPPY });
+    doc.querySelector('#nav [data-route="readiness"]').click();
+    await new Promise(r => setTimeout(r, 10));
+
+    doc.defaultView.fetch = async () => { throw new TypeError('Load failed'); };
+    doc.getElementById('calcBtn').click();
+    await new Promise(r => setTimeout(r, 30));
+
+    const box = doc.getElementById('pageError');
+    assert.equal(box.hidden, false);
+    assert.match(box.textContent, /PIOS_CORS_ORIGINS/, 'must name the actual likely cause');
+    assert.match(box.textContent, /قبل وصول أي استجابة HTTP/, 'must state that no HTTP response arrived');
+    assert.doesNotMatch(box.textContent, /HTTP \d{3}/, 'must NOT invent a status code that never existed');
+  });
+
   test('a 401 on load falls back to demo data AND states the reason', async () => {
     const { doc, w } = await boot({ fail: { status: 401, statusText: 'Unauthorized', body: { detail: 'Bearer token required' } } });
     const notice = doc.getElementById('demoNotice');
@@ -289,5 +309,53 @@ describe('API errors are visible, never silent', () => {
     assert.match(notice.textContent, /HTTP 401/,
       'the banner must say WHY it fell back, not silently show synthetic data');
     assert.equal(w.PIOS_CONFIG.demoMode, false, 'config still declares live mode; the fallback is runtime');
+  });
+});
+
+describe('no silent no-op controls on ANY route', () => {
+  const ROUTES = ['dashboard','worklist','readiness','evidence','findings','documents','exports',
+                  'pilot','deployment','operations','assurance','intelligence','actions',
+                  'committee','institutional-pilot','governance','security'];
+
+  test('every route renders, and every control is either wired or visibly disabled', async () => {
+    const { doc } = await boot({ routes: HAPPY });
+    const report = [];
+
+    for (const r of ROUTES) {
+      doc.defaultView.location.hash = '#/' + r;
+      doc.defaultView.dispatchEvent(new doc.defaultView.HashChangeEvent('hashchange'));
+      await new Promise(res => setTimeout(res, 15));
+
+      const main = doc.getElementById('main');
+      assert.ok(main.innerHTML.trim().length > 0, `route ${r} rendered nothing`);
+
+      const controls = [...main.querySelectorAll('button, .filter')];
+      for (const el of controls) {
+        const wired = el.dataset.wired === '1';
+        const disabled = el.disabled === true || el.getAttribute('aria-disabled') === 'true';
+        assert.ok(wired || disabled,
+          `route ${r}: control "${(el.textContent || '').trim().slice(0, 40)}" is neither wired nor disabled - it is a silent no-op`);
+        if (!wired) {
+          assert.ok((el.title || '').length > 0,
+            `route ${r}: disabled control "${(el.textContent || '').trim().slice(0, 40)}" must explain why`);
+        }
+      }
+      report.push(`${r}: ${controls.filter(e => e.dataset.wired === '1').length} wired / ${controls.length} total`);
+    }
+    console.log('   route control inventory:\n     ' + report.join('\n     '));
+  });
+
+  test('disabled controls carry an Arabic explanation', async () => {
+    const { doc } = await boot({ routes: HAPPY });
+    doc.defaultView.location.hash = '#/evidence';
+    doc.defaultView.dispatchEvent(new doc.defaultView.HashChangeEvent('hashchange'));
+    await new Promise(res => setTimeout(res, 15));
+
+    const blocked = [...doc.querySelectorAll('#main button')].filter(b => b.dataset.wired !== '1');
+    assert.ok(blocked.length > 0, 'evidence page is expected to have unimplemented actions');
+    for (const b of blocked) {
+      assert.match(b.title, /غير مُفعّل/, 'the reason must be written in Arabic');
+      assert.equal(b.disabled, true);
+    }
   });
 });
