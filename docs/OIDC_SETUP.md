@@ -113,6 +113,26 @@ successfully once before Keycloak can complete its first start.** Render restart
 a failed service automatically, so this resolves itself — it is not a manual
 step, but it does explain a first-deploy Keycloak failure.
 
+## Health checks and the management port
+
+Keycloak 25 serves `/health` and `/metrics` on a **separate management
+interface**, port 9000 by default. Render routes only the one port the container
+binds, so nothing outside can reach 9000 — and `healthCheckPath: /health/ready`
+in `render.yaml` would poll a path the main server does not serve. The service
+would then fail its health check no matter how healthy Keycloak actually is.
+
+`deploy/keycloak/Dockerfile` therefore sets `KC_LEGACY_OBSERVABILITY_INTERFACE=true`,
+which puts health back on the main HTTP server. Keycloak calls this "not
+recommended" — the usual advice is to keep management off the public port, which
+assumes a platform that can expose a second port privately. Render's single-port
+model cannot, so the choice is health on the main port or no health check at all.
+Metrics stay disabled (`KC_METRICS_ENABLED=false`), so only health is exposed.
+
+It is a **build-time** option, so it is set before `kc.sh build` and repeated in
+the runtime stage. `backend/tests/test_keycloak_deployment_config.py` fails if
+those two stages drift apart or if the flag is dropped while a health check is
+still configured.
+
 ## Free-plan reality
 
 Keycloak on Render's free tier (512 MB, sleeps when idle) will cold-start

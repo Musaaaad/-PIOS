@@ -43,6 +43,12 @@ services:
     branch: main
     dockerfilePath: ./deploy/keycloak/Dockerfile
     dockerContext: ./deploy/keycloak
+    # Reachable only because deploy/keycloak/Dockerfile sets
+    # KC_LEGACY_OBSERVABILITY_INTERFACE=true. Keycloak 25 serves /health on a
+    # separate management interface (port 9000) by default, and Render routes
+    # only the single port the app binds - so without that flag this path 404s
+    # and the service never passes its health check. Kept in step by
+    # backend/tests/test_keycloak_deployment_config.py.
     healthCheckPath: /health/ready
     autoDeploy: true
     envVars:
