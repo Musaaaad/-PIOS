@@ -64,7 +64,12 @@ window.PIOS_CONFIG = {
   demoMode: ${DEMO},
   defaultToken: "",
   refreshSeconds: 60,
-  appVersion: "1.0.0"
+  appVersion: "1.0.0",
+  oidc: {
+    issuer: "${PIOS_OIDC_ISSUER:-}",
+    clientId: "${PIOS_OIDC_CLIENT_ID:-pios-portal}",
+    scope: "openid profile email"
+  }
 };
 EOF
 
@@ -99,7 +104,14 @@ if grep -q "dev:portal-user" "$OUT/config.js"; then
   exit 1
 fi
 
-for required in index.html app.js styles.css config.js demo-data.js; do
+# A public OIDC client uses PKCE precisely so that no secret is needed. Any
+# secret-looking value reaching the published bundle is a hard failure.
+if grep -qiE "client_?secret|PIOS_OIDC_CLIENT_SECRET" "$OUT/config.js"; then
+  echo "[build_frontend] FATAL: a client secret must never be published to the frontend" >&2
+  exit 1
+fi
+
+for required in index.html app.js auth.js styles.css config.js demo-data.js; do
   [ -f "$OUT/$required" ] || { echo "[build_frontend] FATAL: missing $required" >&2; exit 1; }
 done
 

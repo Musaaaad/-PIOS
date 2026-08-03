@@ -33,6 +33,7 @@
         <div class="top-actions">
           <button id="refreshBtn" class="icon-btn" title="تحديث">↻</button>
           <button id="alertsBtn" class="icon-btn alert-button" title="التنبيهات">🔔<span id="alertBadge">0</span></button>
+          <button id="logoutBtn" class="icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج" hidden>⏻</button>
           <div class="user-chip"><span class="avatar">ق</span><div><strong id="userName">قائد الاعتماد</strong><small id="userRole">Accreditation Lead</small></div></div>
         </div>
       </header>
@@ -45,7 +46,22 @@
     </aside>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </div>
+  <div id="loginScreen" class="login-screen" hidden>
+    <main class="login-card" role="main" aria-labelledby="loginTitle">
+      <div class="brand-mark" aria-hidden="true">Rx</div>
+      <h1 id="loginTitle">تسجيل الدخول المؤسسي</h1>
+      <p class="login-sub">منصة إدارة وتشغيل الصيدلية — مستشفى طريف العام</p>
+      <div id="loginError" class="api-error" hidden></div>
+      <button id="loginBtn" class="btn login-btn">الدخول عبر الهوية المؤسسية</button>
+      <p id="loginUnavailable" class="login-note" hidden>
+        لم يتم ضبط مزود الهوية (OIDC) بعد، لذلك تسجيل الدخول غير متاح.
+        تعرض المنصة حاليًا بيانات عرض تجريبية غير معتمدة.
+      </p>
+      <p class="login-note">لا تُخزَّن أي كلمات مرور في المتصفح. تتم المصادقة لدى مزود الهوية عبر PKCE.</p>
+    </main>
+  </div>
   <script src="config.js"></script>
+  <script src="auth.js"></script>
   <script src="demo-data.js"></script>
   <script src="app.js"></script>
 </body>

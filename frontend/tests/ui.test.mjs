@@ -359,3 +359,192 @@ describe('no silent no-op controls on ANY route', () => {
     }
   });
 });
+
+// --------------------------------------------------------------------------
+// Sprint 23 - institutional authentication (OIDC Authorization Code + PKCE)
+// --------------------------------------------------------------------------
+
+const ISSUER = 'https://pios-keycloak.onrender.com/realms/pios';
+
+async function bootAuth({ oidc = true, routes = HAPPY, tokens = null, search = '', width = 390, seed = {} } = {}) {
+  const html = readFileSync(join(DIST, 'index.html'), 'utf8');
+  const dom = new JSDOM(html, {
+    runScripts: 'outside-only',
+    url: 'https://pios-frontend.onrender.com/' + search,
+    pretendToBeVisual: true,
+  });
+  const w = dom.window;
+  w.innerWidth = width;
+
+  // jsdom has no WebCrypto; PKCE needs getRandomValues + SHA-256 digest.
+  const { webcrypto } = await import('node:crypto');
+  Object.defineProperty(w, 'crypto', { value: webcrypto, configurable: true });
+  // TextEncoder is a standard browser global that jsdom does not expose on the
+  // window. Supplying it closes a harness gap, not an application gap.
+  w.TextEncoder = TextEncoder;
+
+  const calls = [];
+  const navigations = [];
+  w.fetch = async (url, opts = {}) => {
+    calls.push({ url, method: (opts.method || 'GET').toUpperCase(), body: opts.body, opts });
+    if (String(url).includes('/protocol/openid-connect/token')) {
+      return json({ access_token: 'AT-' + Date.now(), refresh_token: 'RT', id_token: 'IT', expires_in: 300 });
+    }
+    for (const [frag, res] of Object.entries(routes)) if (String(url).includes(frag)) return json(res);
+    return json({}, 404, 'Not Found');
+  };
+  // navigations are captured via PIOS_AUTH.setNavigator once auth.js loads
+
+  const cfg = readFileSync(join(DIST, 'config.js'), 'utf8');
+  w.eval(cfg);
+  if (oidc) w.eval(`window.PIOS_CONFIG.oidc = {issuer:${JSON.stringify(ISSUER)}, clientId:'pios-portal', scope:'openid profile email'};`);
+  else w.eval(`window.PIOS_CONFIG.oidc = {issuer:'', clientId:''};`);
+
+  w.eval(readFileSync(join(DIST, 'auth.js'), 'utf8'));
+  w.PIOS_AUTH.setNavigator((u) => navigations.push(String(u)));
+  if (tokens) w.sessionStorage.setItem('pios-oidc-tokens', JSON.stringify({ ...tokens, expires_at: Date.now() + 300000 }));
+  for (const [k, v] of Object.entries(seed)) w.sessionStorage.setItem(k, v);
+  w.eval(readFileSync(join(DIST, 'demo-data.js'), 'utf8'));
+  w.eval(readFileSync(join(DIST, 'app.js'), 'utf8'));
+  await new Promise(r => setTimeout(r, 40));
+  return { dom, w, doc: w.document, calls, navigations };
+}
+
+describe('Sprint 23 - no secrets are published', () => {
+  test('the built bundle contains no client secret and no dev token', () => {
+    for (const f of ['config.js', 'auth.js', 'app.js']) {
+      const src = readFileSync(join(DIST, f), 'utf8');
+      assert.doesNotMatch(src, /client_?secret/i, `${f} must not reference a client secret`);
+      assert.doesNotMatch(src, /dev:portal-user/, `${f} must not contain a development token`);
+    }
+  });
+
+  test('auth.js never sends a client_secret in the token request', async () => {
+    const src = readFileSync(join(DIST, 'auth.js'), 'utf8');
+    assert.doesNotMatch(src, /client_secret/);
+    assert.match(src, /code_challenge_method/, 'PKCE must be used instead');
+  });
+
+  test('tokens are kept in sessionStorage, not localStorage', async () => {
+    const { w } = await bootAuth({ tokens: { access_token: 'AT', refresh_token: 'RT' } });
+    assert.ok(w.sessionStorage.getItem('pios-oidc-tokens'), 'session storage holds the tokens');
+    assert.equal(w.localStorage.getItem('pios-oidc-tokens'), null,
+      'refresh tokens must not be written to localStorage');
+  });
+});
+
+describe('Sprint 23 - login gate and Arabic login screen', () => {
+  test('unauthenticated users see the Arabic login screen, not demo data', async () => {
+    const { doc } = await bootAuth({});
+    const screen = doc.getElementById('loginScreen');
+    assert.equal(screen.hidden, false, 'the login gate must be shown');
+    assert.match(doc.getElementById('loginTitle').textContent, /تسجيل الدخول المؤسسي/);
+    assert.equal(doc.getElementById('loginBtn').disabled, false);
+  });
+
+  test('login screen is usable at an iPhone-class viewport', async () => {
+    const { doc, w } = await bootAuth({ width: 390 });
+    assert.equal(w.innerWidth, 390);
+    const card = doc.querySelector('.login-card');
+    assert.ok(card, 'the login card must render');
+    assert.equal(doc.documentElement.getAttribute('dir'), 'rtl', 'RTL must hold on the login screen');
+    const css = readFileSync(join(DIST, 'styles.css'), 'utf8');
+    assert.match(css, /@media\(max-width:760px\)\{\.login-card/, 'login must have a mobile breakpoint');
+    assert.match(css, /\.login-btn\{width:100%/, 'the sign-in control must be full width on mobile');
+  });
+
+  test('with no identity provider configured the app does not gate, it labels demo mode', async () => {
+    // Gating on a sign-in that cannot exist would lock the app out entirely.
+    // The correct behaviour is to fall through to demo mode and say so.
+    const { doc } = await bootAuth({ oidc: false, routes: {} });
+    assert.equal(doc.getElementById('loginScreen').hidden, true, 'no gate without an IdP');
+    const notice = doc.getElementById('demoNotice');
+    assert.equal(notice.hidden, false, 'demo mode must be visibly labelled');
+    assert.match(notice.textContent, /بيانات عرض تجريبية/);
+  });
+
+  test('an authenticated session skips the gate and loads the app', async () => {
+    const { doc } = await bootAuth({ tokens: { access_token: 'AT', refresh_token: 'RT' } });
+    assert.equal(doc.getElementById('loginScreen').hidden, true);
+    assert.ok(doc.getElementById('main').innerHTML.trim().length > 0);
+    assert.equal(doc.getElementById('logoutBtn').hidden, false, 'sign-out must be offered');
+  });
+});
+
+describe('Sprint 23 - Authorization Code + PKCE', () => {
+  test('sign-in redirects with S256 challenge, state, and no secret', async () => {
+    const { doc, w, navigations } = await bootAuth({});
+    doc.getElementById('loginBtn').click();
+    await new Promise(r => setTimeout(r, 40));
+
+    assert.equal(navigations.length, 1, 'exactly one redirect to the identity provider');
+    const url = new URL(navigations[0]);
+    assert.ok(url.href.startsWith(ISSUER + '/protocol/openid-connect/auth'));
+    assert.equal(url.searchParams.get('response_type'), 'code');
+    assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
+    assert.ok(url.searchParams.get('code_challenge'), 'a PKCE challenge is required');
+    assert.ok(url.searchParams.get('state'), 'a state value is required');
+    assert.equal(url.searchParams.get('client_secret'), null, 'no secret may appear in the URL');
+    // The verifier must stay in the browser and never travel in the redirect.
+    assert.equal(url.searchParams.get('code_verifier'), null);
+    assert.ok(w.sessionStorage.getItem('pios-oidc-verifier'), 'the verifier is retained locally');
+  });
+
+  test('callback exchanges the code using the verifier and clears the URL', async () => {
+    // The app handles the redirect back during boot, so the PKCE state and
+    // verifier must already be in session storage - exactly as they are after
+    // a real sign-in redirect.
+    const { w, calls } = await bootAuth({
+      search: '?code=AUTHCODE&state=ST2',
+      seed: { 'pios-oidc-state': 'ST2', 'pios-oidc-verifier': 'VERIFIER2' },
+    });
+
+    const ex = calls.find(c => String(c.url).includes('/protocol/openid-connect/token') && c.method === 'POST');
+    assert.ok(ex, 'the code must be exchanged at the token endpoint');
+    const body = new URLSearchParams(ex.body);
+    assert.equal(body.get('grant_type'), 'authorization_code');
+    assert.equal(body.get('code'), 'AUTHCODE');
+    assert.equal(body.get('code_verifier'), 'VERIFIER2', 'the PKCE verifier must be presented');
+    assert.equal(body.get('client_secret'), null, 'a public client sends no secret');
+    assert.ok(w.PIOS_AUTH.isAuthenticated(), 'the session must now be active');
+    assert.doesNotMatch(w.location.href, /code=/, 'the code must be stripped from the URL');
+    assert.equal(w.sessionStorage.getItem('pios-oidc-verifier'), null, 'the verifier is discarded after use');
+  });
+
+  test('a mismatched state is rejected (CSRF defence)', async () => {
+    const { w, doc, calls } = await bootAuth({
+      search: '?code=AUTHCODE&state=ATTACKER',
+      seed: { 'pios-oidc-state': 'GENUINE', 'pios-oidc-verifier': 'V' },
+    });
+    assert.ok(!calls.find(c => String(c.url).includes('/protocol/openid-connect/token')),
+      'a code arriving with an unexpected state must never be exchanged');
+    assert.equal(w.PIOS_AUTH.isAuthenticated(), false);
+    const screen = doc.getElementById('loginScreen');
+    assert.equal(screen.hidden, false, 'the user must be returned to sign-in');
+    assert.match(doc.getElementById('loginError').textContent, /state mismatch/);
+  });
+
+  test('API calls carry the OIDC bearer token', async () => {
+    const { calls } = await bootAuth({ tokens: { access_token: 'AT-LIVE', refresh_token: 'RT' } });
+    const apiCall = calls.find(c => String(c.url).includes('/dashboard/overview'));
+    assert.ok(apiCall, 'the app must call the API once authenticated');
+    assert.equal(apiCall.opts.headers.Authorization, 'Bearer AT-LIVE');
+  });
+
+  test('sign-out clears the session and redirects to end-session', async () => {
+    const { doc, w, navigations } = await bootAuth({ tokens: { access_token: 'AT', refresh_token: 'RT', id_token: 'IT' } });
+    doc.getElementById('logoutBtn').click();
+    await new Promise(r => setTimeout(r, 20));
+    assert.equal(w.sessionStorage.getItem('pios-oidc-tokens'), null, 'tokens must be cleared');
+    const out = navigations.find(u => u.includes('/protocol/openid-connect/logout'));
+    assert.ok(out, 'the identity provider session must also be ended');
+    assert.match(out, /id_token_hint=IT/);
+  });
+
+  test('an expired access token is not sent', async () => {
+    const { w } = await bootAuth({});
+    w.sessionStorage.setItem('pios-oidc-tokens', JSON.stringify({ access_token: 'OLD', expires_at: Date.now() - 1000 }));
+    assert.equal(w.PIOS_AUTH.accessToken(), null);
+    assert.equal(w.PIOS_AUTH.isAuthenticated(), false);
+  });
+});
