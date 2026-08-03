@@ -43,6 +43,24 @@ enters the system.
 Redirect URIs cover the Render frontend, the GitHub Pages frontend, and
 `localhost:8080` for development.
 
+### The realm file is schema-checked
+
+Keycloak deserializes the realm onto `RealmRepresentation` with Jackson, and
+those classes do **not** ignore unknown fields. One unrecognised key aborts the
+whole import and the container never becomes ready — there is no partial import
+and no warning-and-continue.
+
+Sprint 23 shipped exactly that defect: a top-level `postLogoutRedirectUris` on
+the client, which is not a field of `ClientRepresentation` in Keycloak 25.0.
+Post-logout redirects belong in the `post.logout.redirect.uris` **attribute**,
+where `"+"` means "use the registered redirect URIs" — which the realm already
+set, so removing the bad field cost no functionality.
+
+`backend/tests/test_keycloak_realm_import.py` now validates every realm, client,
+mapper and role key against the property sets Keycloak actually accepts, so this
+fails in CI instead of on a deploy. Those sets are generated from the real
+Keycloak artifact rather than hand-written; see `deploy/keycloak/schema/README.md`.
+
 ## Configuration values
 
 These are **derived from the realm and service names**, not invented:
@@ -98,7 +116,11 @@ step, but it does explain a first-deploy Keycloak failure.
 ## Free-plan reality
 
 Keycloak on Render's free tier (512 MB, sleeps when idle) will cold-start
-slowly — expect tens of seconds on the first sign-in after inactivity. The free
+slowly — expect tens of seconds on the first sign-in after inactivity. The
+container runs `KC_CACHE=local`: the default `ispn` starts a clustered cache and
+its JGroups discovery, which on a single non-scalable instance can only fail to
+find peers and log about it. The cost is that a restart clears sessions and signs
+users out; realm, users and roles live in PostgreSQL and are unaffected. The free
 PostgreSQL instance also expires after 30 days, and it now carries both PIOS and
 Keycloak data. **For a real institutional pilot, move `pios-keycloak` and the
 database to a paid plan** — at which point Keycloak should be given its own

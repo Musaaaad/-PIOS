@@ -32,6 +32,16 @@ ENV KC_HTTP_ENABLED=true
 # token fails audience/issuer validation.
 ENV KC_PROXY_HEADERS=xforwarded
 ENV KC_HOSTNAME_STRICT=false
+# Keycloak's `cache` option defaults to `ispn`, which starts the clustered
+# Infinispan stack and its JGroups discovery. This deployment is a single
+# instance on a plan that cannot scale horizontally, so there is never a second
+# node to find - the discovery attempts only produce repeated warnings and cost
+# startup time on a 512 MB box. `local` is the supported value for a single
+# node; it is a runtime option in 25.0, so it still applies under --optimized.
+# Trade-off: sessions live in memory, so a restart signs users out. That is
+# already true of a single-replica deployment, and the realm, users and roles
+# are in PostgreSQL either way.
+ENV KC_CACHE=local
 
 USER root
 RUN chmod +x /opt/keycloak/entrypoint.sh
