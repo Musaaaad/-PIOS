@@ -36,8 +36,11 @@ def build_client(monkeypatch, origins: str) -> TestClient:
 
 
 @pytest.fixture(autouse=True)
-def _restore_app():
+def _restore_app(monkeypatch):
     yield
+    # Undo env changes before rebuilding settings, so a per-test CORS or auth
+    # value is never baked into the cached settings for the rest of the session.
+    monkeypatch.undo()
     get_settings.cache_clear()
     import app.main as main_module
 
