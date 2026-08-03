@@ -16,6 +16,22 @@ FROM quay.io/keycloak/keycloak:25.0 AS builder
 ENV KC_DB=postgres
 ENV KC_HEALTH_ENABLED=true
 ENV KC_METRICS_ENABLED=false
+# Keycloak 25 moved /health and /metrics onto a separate management interface,
+# which defaults to port 9000. Render routes exactly one port - the $PORT the
+# app binds - so nothing outside the container can reach 9000, and the
+# healthCheckPath in render.yaml would poll a path the main server does not
+# serve. The service would then never pass its health check no matter how
+# healthy Keycloak actually is.
+#
+# This flag puts health back on the main HTTP server. Keycloak describes it as
+# "not recommended" because the usual advice is to keep management off the
+# public port; that advice assumes a platform where a second port can be
+# exposed privately, which Render's single-port model does not offer. Metrics
+# stay disabled above, so this exposes health only.
+#
+# Build-time option, hence set here before kc.sh build (and repeated in the
+# runtime stage below so the two agree, as with KC_DB and KC_HEALTH_ENABLED).
+ENV KC_LEGACY_OBSERVABILITY_INTERFACE=true
 RUN /opt/keycloak/bin/kc.sh build
 
 FROM quay.io/keycloak/keycloak:25.0
@@ -25,6 +41,8 @@ COPY entrypoint.sh /opt/keycloak/entrypoint.sh
 
 ENV KC_DB=postgres
 ENV KC_HEALTH_ENABLED=true
+# Must match the builder stage: health on the main port, where Render can reach it.
+ENV KC_LEGACY_OBSERVABILITY_INTERFACE=true
 ENV KC_HTTP_ENABLED=true
 # Render terminates TLS at its edge and forwards plain HTTP, so Keycloak must
 # trust the forwarding headers to build correct issuer and redirect URLs.
@@ -32,6 +50,16 @@ ENV KC_HTTP_ENABLED=true
 # token fails audience/issuer validation.
 ENV KC_PROXY_HEADERS=xforwarded
 ENV KC_HOSTNAME_STRICT=false
+# Keycloak's `cache` option defaults to `ispn`, which starts the clustered
+# Infinispan stack and its JGroups discovery. This deployment is a single
+# instance on a plan that cannot scale horizontally, so there is never a second
+# node to find - the discovery attempts only produce repeated warnings and cost
+# startup time on a 512 MB box. `local` is the supported value for a single
+# node; it is a runtime option in 25.0, so it still applies under --optimized.
+# Trade-off: sessions live in memory, so a restart signs users out. That is
+# already true of a single-replica deployment, and the realm, users and roles
+# are in PostgreSQL either way.
+ENV KC_CACHE=local
 
 USER root
 RUN chmod +x /opt/keycloak/entrypoint.sh

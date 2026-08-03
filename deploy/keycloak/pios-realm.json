@@ -89,11 +89,6 @@
           }
         }
       ],
-      "postLogoutRedirectUris": [
-        "https://pios-frontend.onrender.com/*",
-        "https://musaaaad.github.io/-PIOS/*",
-        "http://localhost:8080/*"
-      ],
       "implicitFlowEnabled": false,
       "serviceAccountsEnabled": false
     }

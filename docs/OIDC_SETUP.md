@@ -43,6 +43,24 @@ enters the system.
 Redirect URIs cover the Render frontend, the GitHub Pages frontend, and
 `localhost:8080` for development.
 
+### The realm file is schema-checked
+
+Keycloak deserializes the realm onto `RealmRepresentation` with Jackson, and
+those classes do **not** ignore unknown fields. One unrecognised key aborts the
+whole import and the container never becomes ready — there is no partial import
+and no warning-and-continue.
+
+Sprint 23 shipped exactly that defect: a top-level `postLogoutRedirectUris` on
+the client, which is not a field of `ClientRepresentation` in Keycloak 25.0.
+Post-logout redirects belong in the `post.logout.redirect.uris` **attribute**,
+where `"+"` means "use the registered redirect URIs" — which the realm already
+set, so removing the bad field cost no functionality.
+
+`backend/tests/test_keycloak_realm_import.py` now validates every realm, client,
+mapper and role key against the property sets Keycloak actually accepts, so this
+fails in CI instead of on a deploy. Those sets are generated from the real
+Keycloak artifact rather than hand-written; see `deploy/keycloak/schema/README.md`.
+
 ## Configuration values
 
 These are **derived from the realm and service names**, not invented:
@@ -95,10 +113,34 @@ successfully once before Keycloak can complete its first start.** Render restart
 a failed service automatically, so this resolves itself — it is not a manual
 step, but it does explain a first-deploy Keycloak failure.
 
+## Health checks and the management port
+
+Keycloak 25 serves `/health` and `/metrics` on a **separate management
+interface**, port 9000 by default. Render routes only the one port the container
+binds, so nothing outside can reach 9000 — and `healthCheckPath: /health/ready`
+in `render.yaml` would poll a path the main server does not serve. The service
+would then fail its health check no matter how healthy Keycloak actually is.
+
+`deploy/keycloak/Dockerfile` therefore sets `KC_LEGACY_OBSERVABILITY_INTERFACE=true`,
+which puts health back on the main HTTP server. Keycloak calls this "not
+recommended" — the usual advice is to keep management off the public port, which
+assumes a platform that can expose a second port privately. Render's single-port
+model cannot, so the choice is health on the main port or no health check at all.
+Metrics stay disabled (`KC_METRICS_ENABLED=false`), so only health is exposed.
+
+It is a **build-time** option, so it is set before `kc.sh build` and repeated in
+the runtime stage. `backend/tests/test_keycloak_deployment_config.py` fails if
+those two stages drift apart or if the flag is dropped while a health check is
+still configured.
+
 ## Free-plan reality
 
 Keycloak on Render's free tier (512 MB, sleeps when idle) will cold-start
-slowly — expect tens of seconds on the first sign-in after inactivity. The free
+slowly — expect tens of seconds on the first sign-in after inactivity. The
+container runs `KC_CACHE=local`: the default `ispn` starts a clustered cache and
+its JGroups discovery, which on a single non-scalable instance can only fail to
+find peers and log about it. The cost is that a restart clears sessions and signs
+users out; realm, users and roles live in PostgreSQL and are unaffected. The free
 PostgreSQL instance also expires after 30 days, and it now carries both PIOS and
 Keycloak data. **For a real institutional pilot, move `pios-keycloak` and the
 database to a paid plan** — at which point Keycloak should be given its own
