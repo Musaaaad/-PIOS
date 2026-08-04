@@ -34,7 +34,12 @@
           <button id="refreshBtn" class="icon-btn" title="تحديث">↻</button>
           <button id="alertsBtn" class="icon-btn alert-button" title="التنبيهات">🔔<span id="alertBadge">0</span></button>
           <button id="logoutBtn" class="icon-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج" hidden>⏻</button>
-          <div class="user-chip"><span class="avatar">ق</span><div><strong id="userName">قائد الاعتماد</strong><small id="userRole">Accreditation Lead</small></div></div>
+          <!-- Deliberately empty: render() fills these from the verified session.
+               Hard-coded names/roles here were indistinguishable from a real
+               signed-in identity whenever app.js failed to run, which is how a
+               page with no JavaScript still appeared to show a signed-in
+               "Accreditation Lead". Never restore placeholder identity text. -->
+          <div class="user-chip"><span class="avatar" aria-hidden="true"></span><div><strong id="userName"></strong><small id="userRole"></small></div></div>
         </div>
       </header>
       <div id="demoNotice" class="demo-notice" hidden></div>
