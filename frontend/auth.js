@@ -22,7 +22,14 @@
 
   const store = {
     get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
-    set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} },
+    // Returns whether the value survived. Swallowing a failed write silently
+    // is what turned a blocked/full sessionStorage into a bogus "state
+    // mismatch" on return from the identity provider - a CSRF message shown to
+    // a user whose only mistake was having storage unavailable.
+    set(k, v) {
+      try { sessionStorage.setItem(k, v); return sessionStorage.getItem(k) === v; }
+      catch (e) { return false; }
+    },
     del(k) { try { sessionStorage.removeItem(k); } catch (e) {} },
   };
 
@@ -67,15 +74,29 @@
 
   function writeTokens(t) {
     if (!t) { store.del(KEY_TOKENS); return; }
-    t.expires_at = Date.now() + ((Number(t.expires_in) || 60) * 1000);
+    const lifetime = Number(t.expires_in);
+    if (Number.isFinite(lifetime) && lifetime > 0) {
+      t.expires_at = Date.now() + lifetime * 1000;
+      // Never let the safety margin eat more than half the token's own life.
+      // A flat 30s against Keycloak's short default access-token lifespan
+      // discarded a large slice of every session - and against a 60s token it
+      // made the token look expired 30 seconds after it was issued.
+      t.skew_ms = Math.min(30000, Math.floor(lifetime * 1000 / 2));
+    } else {
+      // No usable expires_in: do NOT invent one. The previous `|| 60` default
+      // combined with the flat 30s margin produced a 30-second session out of
+      // thin air. Rely on the server's 401 and refresh() instead.
+      delete t.expires_at;
+      delete t.skew_ms;
+    }
     store.set(KEY_TOKENS, JSON.stringify(t));
   }
 
   function accessToken() {
     const t = readTokens();
     if (!t || !t.access_token) return null;
-    // 30s skew so a token is never sent in the instant it expires.
-    if (t.expires_at && Date.now() > t.expires_at - 30000) return null;
+    const skew = Number.isFinite(t.skew_ms) ? t.skew_ms : 30000;
+    if (t.expires_at && Date.now() > t.expires_at - skew) return null;
     return t.access_token;
   }
 
@@ -99,9 +120,20 @@
     if (!configured()) throw new Error('OIDC is not configured');
     const verifier = randomString(64);
     const st = randomString(32);
-    store.set(KEY_VERIFIER, verifier);
-    store.set(KEY_STATE, st);
+    const kept = store.set(KEY_VERIFIER, verifier) && store.set(KEY_STATE, st);
     store.set(KEY_RETURN, returnHash || location.hash || '#/dashboard');
+
+    // Fail here, before leaving for the identity provider. Without these two
+    // values the return trip cannot succeed, and the user would otherwise
+    // authenticate correctly at Keycloak only to be bounced back to the
+    // sign-in screen with a message blaming CSRF.
+    if (!kept) {
+      throw new Error(
+        'المتصفح يمنع تخزين الجلسة (sessionStorage). عطّل التصفح الخاص أو امنع حجب ' +
+        'البيانات لهذا الموقع ثم أعد المحاولة. / Browser storage is blocked: sign-in ' +
+        'state cannot be kept. Disable Private Browsing or site data blocking, then retry.',
+      );
+    }
 
     const p = new URLSearchParams({
       client_id: OIDC.clientId,
@@ -133,7 +165,20 @@
     store.del(KEY_STATE); store.del(KEY_VERIFIER);
 
     // CSRF defence: a code arriving with a state we did not issue is rejected.
-    if (!expected || returnedState !== expected) {
+    // The two cases are reported apart because they need opposite responses.
+    // No stored state at all means our own record vanished between the two
+    // page loads (blocked or evicted sessionStorage) - the sign-in was fine and
+    // retrying can work. A state that differs is a genuine CSRF signal.
+    if (!expected) {
+      cleanUrl();
+      throw new Error(
+        'انتهت حالة تسجيل الدخول قبل العودة من مزود الهوية (تخزين المتصفح غير متاح). ' +
+        'أعد المحاولة في نافذة عادية غير خاصة. / Sign-in state was lost before the ' +
+        'return from the identity provider (browser storage unavailable). Retry in a ' +
+        'normal, non-private window.',
+      );
+    }
+    if (returnedState !== expected) {
       cleanUrl();
       throw new Error('state mismatch');
     }
