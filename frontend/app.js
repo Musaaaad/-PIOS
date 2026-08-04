@@ -125,7 +125,15 @@
       // A live API with an identity provider configured means protected data is
       // only reachable with a session. Gate rather than silently showing demo
       // data dressed up as real.
-      if(!AUTH.isAuthenticated()){ showLogin(); return }
+      //
+      // But gate only after trying to renew. The access token is short-lived
+      // (the realm leaves accessTokenLifespan at the Keycloak default) while the
+      // refresh token outlives it by a long way, so on any reload after the
+      // access token ages out this branch was reached while a perfectly good
+      // refresh token sat in sessionStorage - and the user was thrown back to
+      // the sign-in screen despite a live Keycloak session. api() already
+      // refreshes on a 401; startup has to do the same or it contradicts it.
+      if(!AUTH.isAuthenticated() && !(await AUTH.refresh().catch(()=>false))){ showLogin(); return }
       hideLogin();
     }
     load();
