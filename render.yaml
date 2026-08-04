@@ -170,10 +170,20 @@ services:
         sync: false
       - key: PIOS_OIDC_CLIENT_ID
         value: pios-portal
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    # NO catch-all rewrite. `source: /*` -> /index.html was removed in Sprint
+    # 23.3: it is unnecessary here and it is the only server-side rule capable
+    # of answering a request for styles.css or app.js with index.html. When an
+    # asset request is answered with HTML, the browser applies no CSS and
+    # executes no JavaScript, leaving the raw shell on screen - which is exactly
+    # the reported post-login symptom.
+    #
+    # It is unnecessary because frontend/app.js routes entirely on the hash
+    # (`route()` reads location.hash), and the only history call in the app is
+    # auth.js `history.replaceState` in cleanUrl(), which preserves the
+    # pathname. Every real navigation therefore stays on `/`; no deep path is
+    # ever requested, so there is nothing for a SPA fallback to catch.
+    #
+    # Pinned by frontend/tests/post_login.test.mjs.
     headers:
       - path: /*
         name: X-Content-Type-Options
