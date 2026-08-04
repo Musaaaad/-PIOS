@@ -59,13 +59,48 @@
     const el=$('#loginScreen'); if(!el) return;
     el.hidden=false; document.body.classList.add('login-open');
     const un=$('#loginUnavailable'); if(un) un.hidden=!!(AUTH&&AUTH.configured());
+    // Whenever the login screen is shown, the previous attempt is over. Clear
+    // any busy state so the button is pressable again - a failed callback must
+    // never leave the user staring at a permanently "redirecting" button.
+    endLoginAttempt();
     const btn=$('#loginBtn'); if(btn) btn.disabled=!(AUTH&&AUTH.configured());
     const box=$('#loginError'); if(box){ if(msg){box.textContent=msg;box.hidden=false} else {box.hidden=true;box.textContent=''} }
   }
   function hideLogin(){const el=$('#loginScreen'); if(el) el.hidden=true; document.body.classList.remove('login-open')}
+  // The sign-in button has to end every attempt in a usable state. Previously
+  // it had no busy state at all: a failed or abandoned redirect left the page
+  // looking like it was still working, and there was nothing to tell the user
+  // a second press was allowed. It now shows progress, refuses to stack
+  // attempts, and always comes back - including when the redirect simply never
+  // happens, which the watchdog covers.
+  let loginBusy=false, loginWatchdog=null;
+  function setLoginBusy(on){
+    loginBusy=on;
+    const btn=$('#loginBtn'); if(!btn) return;
+    if(on){
+      if(!btn.dataset.label) btn.dataset.label=btn.textContent;
+      btn.disabled=true; btn.dataset.busy='1';
+      btn.textContent=t('جارٍ التحويل إلى مزود الهوية…','Redirecting to the identity provider…');
+    } else {
+      btn.disabled=false; delete btn.dataset.busy;
+      if(btn.dataset.label) btn.textContent=btn.dataset.label;
+    }
+  }
+  function endLoginAttempt(){ if(loginWatchdog){clearTimeout(loginWatchdog);loginWatchdog=null} setLoginBusy(false) }
   async function doLogin(){
+    if(loginBusy) return;
+    setLoginBusy(true);
+    // If the browser has not left this page by now the redirect is not coming.
+    // Restore the button so the user can genuinely try again.
+    loginWatchdog=setTimeout(()=>{
+      endLoginAttempt();
+      showLogin(t('لم يبدأ التحويل إلى مزود الهوية. أعد المحاولة.','The redirect to the identity provider did not start. Please try again.'));
+    },8000);
     try{ await AUTH.login(location.hash) }
-    catch(e){ showLogin(t(`تعذّر بدء تسجيل الدخول: ${e.message}`,`Could not start sign-in: ${e.message}`)) }
+    catch(e){
+      endLoginAttempt();
+      showLogin(t(`تعذّر بدء تسجيل الدخول: ${e.message}`,`Could not start sign-in: ${e.message}`));
+    }
   }
   function doLogout(){ if(AUTH) AUTH.logout(); }
   function toast(msg){const e=$('#toast');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200)}

@@ -487,7 +487,7 @@ describe('Sprint 23 - Authorization Code + PKCE', () => {
     assert.equal(url.searchParams.get('client_secret'), null, 'no secret may appear in the URL');
     // The verifier must stay in the browser and never travel in the redirect.
     assert.equal(url.searchParams.get('code_verifier'), null);
-    assert.ok(w.sessionStorage.getItem('pios-oidc-verifier'), 'the verifier is retained locally');
+    assert.ok(JSON.parse(w.sessionStorage.getItem('pios-oidc-tx') || 'null')?.verifier, 'the verifier is retained locally');
   });
 
   test('callback exchanges the code using the verifier and clears the URL', async () => {
@@ -496,7 +496,7 @@ describe('Sprint 23 - Authorization Code + PKCE', () => {
     // a real sign-in redirect.
     const { w, calls } = await bootAuth({
       search: '?code=AUTHCODE&state=ST2',
-      seed: { 'pios-oidc-state': 'ST2', 'pios-oidc-verifier': 'VERIFIER2' },
+      seed: { 'pios-oidc-tx': JSON.stringify({ state: 'ST2', verifier: 'VERIFIER2', ret: '#/dashboard', exp: Date.now() + 600000 }) },
     });
 
     const ex = calls.find(c => String(c.url).includes('/protocol/openid-connect/token') && c.method === 'POST');
@@ -508,13 +508,13 @@ describe('Sprint 23 - Authorization Code + PKCE', () => {
     assert.equal(body.get('client_secret'), null, 'a public client sends no secret');
     assert.ok(w.PIOS_AUTH.isAuthenticated(), 'the session must now be active');
     assert.doesNotMatch(w.location.href, /code=/, 'the code must be stripped from the URL');
-    assert.equal(w.sessionStorage.getItem('pios-oidc-verifier'), null, 'the verifier is discarded after use');
+    assert.equal(w.sessionStorage.getItem('pios-oidc-tx'), null, 'the transaction is discarded after use');
   });
 
   test('a mismatched state is rejected (CSRF defence)', async () => {
     const { w, doc, calls } = await bootAuth({
       search: '?code=AUTHCODE&state=ATTACKER',
-      seed: { 'pios-oidc-state': 'GENUINE', 'pios-oidc-verifier': 'V' },
+      seed: { 'pios-oidc-tx': JSON.stringify({ state: 'GENUINE', verifier: 'V', ret: '#/dashboard', exp: Date.now() + 600000 }) },
     });
     assert.ok(!calls.find(c => String(c.url).includes('/protocol/openid-connect/token')),
       'a code arriving with an unexpected state must never be exchanged');
