@@ -210,9 +210,10 @@ describe('render.yaml static routing', () => {
 describe('post-OIDC-callback page', () => {
   const CALLBACK = { code: 'auth-code-123', state: 'st-abc' };
   const session = () => ({
-    'pios-oidc-state': CALLBACK.state,
-    'pios-oidc-verifier': 'v'.repeat(64),
-    'pios-oidc-return': '#/dashboard',
+    'pios-oidc-tx': JSON.stringify({
+      state: CALLBACK.state, verifier: 'v'.repeat(64),
+      ret: '#/dashboard', exp: Date.now() + 600000,
+    }),
   });
   const callbackUrl = () => `${origin}/?code=${CALLBACK.code}&state=${CALLBACK.state}`;
 
@@ -286,7 +287,7 @@ describe('callback failure does not leave a fake session on screen', () => {
   test('a state mismatch shows the login screen and no placeholder identity', async () => {
     const { doc } = await open({
       url: `${origin}/?code=c&state=WRONG`,
-      session: { 'pios-oidc-state': 'expected', 'pios-oidc-verifier': 'v'.repeat(64) },
+      session: { 'pios-oidc-tx': JSON.stringify({ state: 'expected', verifier: 'v'.repeat(64), ret: '#/dashboard', exp: Date.now() + 600000 }) },
     });
     assert.equal(doc.querySelector('#loginScreen').hidden, false, 'the login screen was not shown');
     const role = doc.querySelector('#userRole').textContent.trim();
@@ -296,7 +297,7 @@ describe('callback failure does not leave a fake session on screen', () => {
   test('a failed token exchange does not authenticate', async () => {
     const { doc, w } = await open({
       url: `${origin}/?code=c&state=st`,
-      session: { 'pios-oidc-state': 'st', 'pios-oidc-verifier': 'v'.repeat(64) },
+      session: { 'pios-oidc-tx': JSON.stringify({ state: 'st', verifier: 'v'.repeat(64), ret: '#/dashboard', exp: Date.now() + 600000 }) },
       tokenStatus: 400,
     });
     assert.equal(w.PIOS_AUTH.isAuthenticated(), false);

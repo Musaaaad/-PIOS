@@ -48,16 +48,18 @@ function authWindow({ url = 'https://pios-frontend.onrender.com/', storage = 'ok
   const w = dom.window;
   inject(w);
 
+  // 'blocked' = ALL site storage refused (both stores). 'session-blocked' =
+  // only sessionStorage refused, which since Sprint 23.5 must still complete.
+  const dead = () => ({
+    getItem: () => null,
+    setItem() { throw new Error('QuotaExceededError'); },
+    removeItem: () => {},
+  });
+  if (storage === 'blocked' || storage === 'session-blocked') {
+    Object.defineProperty(w, 'sessionStorage', { configurable: true, value: dead() });
+  }
   if (storage === 'blocked') {
-    // iOS Safari in Private Browsing / with site data blocked: setItem throws.
-    Object.defineProperty(w, 'sessionStorage', {
-      configurable: true,
-      value: {
-        getItem: () => null,
-        setItem() { throw new Error('QuotaExceededError'); },
-        removeItem: () => {},
-      },
-    });
+    Object.defineProperty(w, 'localStorage', { configurable: true, value: dead() });
   }
 
   w.eval(`window.PIOS_CONFIG=${JSON.stringify({
@@ -131,13 +133,13 @@ describe('access-token lifetime accounting', () => {
 // =============================================================== defect C
 
 describe('blocked browser storage is reported honestly', () => {
-  test('login() refuses to leave rather than guaranteeing a failed return', async () => {
+  test('login() refuses to leave when ALL site storage is blocked', async () => {
     const { auth } = authWindow({ storage: 'blocked' });
     let navigated = null;
     auth.setNavigator(u => { navigated = u; });
 
     await assert.rejects(() => auth.login('#/dashboard'), err => {
-      assert.match(err.message, /storage|sessionStorage/i);
+      assert.match(err.message, /storage|تخزين/i);
       return true;
     });
     assert.equal(navigated, null,
@@ -150,15 +152,16 @@ describe('blocked browser storage is reported honestly', () => {
     await assert.rejects(() => auth.completeLogin(), err => {
       assert.ok(!/state mismatch/.test(err.message),
         'a user with blocked storage must not be told their sign-in looked like CSRF');
-      assert.match(err.message, /storage|تخزين/i);
+      assert.match(err.message, /stored|expired|تسجيل الدخول/i);
       return true;
     });
   });
 
   test('a genuinely different state is still rejected as a mismatch', async () => {
     const { w, auth } = authWindow({ url: 'https://pios-frontend.onrender.com/?code=c&state=FORGED' });
-    w.sessionStorage.setItem('pios-oidc-state', 'issued');
-    w.sessionStorage.setItem('pios-oidc-verifier', 'v'.repeat(64));
+    w.sessionStorage.setItem('pios-oidc-tx', JSON.stringify({
+      state: 'issued', verifier: 'v'.repeat(64), ret: '#/dashboard', exp: Date.now() + 600000,
+    }));
     await assert.rejects(() => auth.completeLogin(), /state mismatch/,
       'CSRF defence must remain intact');
   });
@@ -284,11 +287,11 @@ describe('the authorization-code path is unchanged', () => {
     const { w, auth } = authWindow({ url: 'https://pios-frontend.onrender.com/' });
     auth.setNavigator(() => {});
     await auth.login('#/dashboard');
-    const st = w.sessionStorage.getItem('pios-oidc-state');
+    const issued = JSON.parse(w.sessionStorage.getItem('pios-oidc-tx'));
+    const st = issued.state;
 
     const dom2 = authWindow({ url: `https://pios-frontend.onrender.com/?code=abc&state=${st}` });
-    dom2.w.sessionStorage.setItem('pios-oidc-state', st);
-    dom2.w.sessionStorage.setItem('pios-oidc-verifier', w.sessionStorage.getItem('pios-oidc-verifier'));
+    dom2.w.sessionStorage.setItem('pios-oidc-tx', JSON.stringify(issued));
     dom2.w.fetch = async () => ({
       ok: true, status: 200, headers: { get: () => 'application/json' },
       json: async () => tokenResponse({ expires_in: 300 }),

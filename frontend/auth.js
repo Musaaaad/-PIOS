@@ -16,9 +16,12 @@
   const C = window.PIOS_CONFIG || {};
   const OIDC = C.oidc || {};
   const KEY_TOKENS = 'pios-oidc-tokens';
-  const KEY_VERIFIER = 'pios-oidc-verifier';
-  const KEY_STATE = 'pios-oidc-state';
-  const KEY_RETURN = 'pios-oidc-return';
+  const KEY_TX = 'pios-oidc-tx';
+
+  // How long an in-flight sign-in may take. Keycloak's authorization code is
+  // itself single-use and short-lived, so this only bounds how long a stranded
+  // transaction can sit in storage; it is not a session lifetime.
+  const TX_TTL_MS = 10 * 60 * 1000;
 
   const store = {
     get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
@@ -32,6 +35,67 @@
     },
     del(k) { try { sessionStorage.removeItem(k); } catch (e) {} },
   };
+
+  const local = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) {
+      try { localStorage.setItem(k, v); return localStorage.getItem(k) === v; }
+      catch (e) { return false; }
+    },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+  };
+
+  /* The in-flight OIDC transaction: {state, verifier, ret, exp}.
+   *
+   * Written to sessionStorage AND localStorage. sessionStorage is the right
+   * home for it - tab-scoped and cleared with the tab - but it is not reliably
+   * carried across the cross-origin round trip to the identity provider on
+   * iOS Safari, and losing it strands a sign-in that Keycloak already
+   * completed. localStorage is the durable copy, and is read only when the
+   * session copy is gone.
+   *
+   * What is stored is deliberately not sensitive: the PKCE code_verifier, the
+   * CSRF state, and a return hash. There is no password and no client secret -
+   * this is a public client, which is why PKCE exists. The verifier is useless
+   * on its own: redeeming it also requires the single-use authorization code,
+   * which Keycloak binds to this client and redirect_uri. Tokens are NEVER
+   * written here; they stay in sessionStorage alone.
+   *
+   * Single use: consumed and erased from both stores on the return trip,
+   * whatever the outcome, and expired entries are swept whenever this module
+   * loads.
+   */
+  const tx = {
+    save(t) {
+      const raw = JSON.stringify(t);
+      // Both are attempted; either surviving is enough to complete sign-in.
+      const inSession = store.set(KEY_TX, raw);
+      const inLocal = local.set(KEY_TX, raw);
+      return { inSession, inLocal, kept: inSession || inLocal };
+    },
+    /** The live transaction, or null. Never returns an expired one. */
+    load() {
+      for (const raw of [store.get(KEY_TX), local.get(KEY_TX)]) {
+        if (!raw) continue;
+        let t = null;
+        try { t = JSON.parse(raw); } catch (e) { continue; }
+        if (!t || !t.state || !t.verifier) continue;
+        if (!(Number(t.exp) > Date.now())) continue;   // expired or malformed
+        return t;
+      }
+      return null;
+    },
+    clear() { store.del(KEY_TX); local.del(KEY_TX); },
+    /** Drops a stranded/expired transaction so it cannot linger in storage. */
+    sweep() {
+      const raw = local.get(KEY_TX);
+      if (!raw) return;
+      let t = null;
+      try { t = JSON.parse(raw); } catch (e) { local.del(KEY_TX); return; }
+      if (!t || !(Number(t.exp) > Date.now())) local.del(KEY_TX);
+    },
+  };
+  tx.sweep();
 
   const configured = () => !!(OIDC.issuer && OIDC.clientId);
 
@@ -120,18 +184,26 @@
     if (!configured()) throw new Error('OIDC is not configured');
     const verifier = randomString(64);
     const st = randomString(32);
-    const kept = store.set(KEY_VERIFIER, verifier) && store.set(KEY_STATE, st);
-    store.set(KEY_RETURN, returnHash || location.hash || '#/dashboard');
+    // A previous attempt may have been abandoned midway. Only one sign-in can
+    // be in flight, and a stale transaction must never be redeemable.
+    tx.clear();
+    const kept = tx.save({
+      state: st,
+      verifier,
+      ret: returnHash || location.hash || '#/dashboard',
+      exp: Date.now() + TX_TTL_MS,
+    }).kept;
 
-    // Fail here, before leaving for the identity provider. Without these two
-    // values the return trip cannot succeed, and the user would otherwise
-    // authenticate correctly at Keycloak only to be bounced back to the
-    // sign-in screen with a message blaming CSRF.
+    // Fail here, before leaving for the identity provider. Without the state
+    // and verifier the return trip cannot succeed, and the user would
+    // otherwise authenticate correctly at Keycloak only to be bounced back to
+    // the sign-in screen. This now requires BOTH stores to be unavailable.
     if (!kept) {
       throw new Error(
-        'المتصفح يمنع تخزين الجلسة (sessionStorage). عطّل التصفح الخاص أو امنع حجب ' +
-        'البيانات لهذا الموقع ثم أعد المحاولة. / Browser storage is blocked: sign-in ' +
-        'state cannot be kept. Disable Private Browsing or site data blocking, then retry.',
+        'المتصفح يمنع تخزين بيانات الموقع بالكامل، ولا يمكن إتمام تسجيل الدخول. ' +
+        'اسمح ببيانات الموقع لهذا العنوان ثم أعد المحاولة. / The browser is blocking ' +
+        'all site storage, so sign-in cannot complete. Allow site data for this ' +
+        'address and retry.',
       );
     }
 
@@ -160,29 +232,31 @@
     }
     if (!code) return false;
 
-    const expected = store.get(KEY_STATE);
-    const verifier = store.get(KEY_VERIFIER);
-    store.del(KEY_STATE); store.del(KEY_VERIFIER);
+    // Read from whichever store still holds it (session first, then the
+    // durable copy), then erase it from BOTH immediately. The transaction is
+    // single use: whatever happens below, this code can never be replayed
+    // against a surviving verifier.
+    const t = tx.load();
+    tx.clear();
 
-    // CSRF defence: a code arriving with a state we did not issue is rejected.
-    // The two cases are reported apart because they need opposite responses.
-    // No stored state at all means our own record vanished between the two
-    // page loads (blocked or evicted sessionStorage) - the sign-in was fine and
-    // retrying can work. A state that differs is a genuine CSRF signal.
-    if (!expected) {
+    // CSRF defence, unchanged in strength: the code must arrive with exactly
+    // the state we issued. The cases are reported apart because they need
+    // opposite responses - a missing transaction is recoverable by retrying, a
+    // differing state is a genuine CSRF signal and never is.
+    if (!t) {
       cleanUrl();
       throw new Error(
-        'انتهت حالة تسجيل الدخول قبل العودة من مزود الهوية (تخزين المتصفح غير متاح). ' +
-        'أعد المحاولة في نافذة عادية غير خاصة. / Sign-in state was lost before the ' +
-        'return from the identity provider (browser storage unavailable). Retry in a ' +
-        'normal, non-private window.',
+        'انتهت مهلة تسجيل الدخول أو تعذّر حفظ بياناته. اضغط زر الدخول مرة أخرى. / ' +
+        'The sign-in attempt expired or could not be stored. Press the sign-in button ' +
+        'again to start a new attempt.',
       );
     }
-    if (returnedState !== expected) {
+    if (returnedState !== t.state) {
       cleanUrl();
       throw new Error('state mismatch');
     }
-    if (!verifier) { cleanUrl(); throw new Error('missing PKCE verifier'); }
+    if (!t.verifier) { cleanUrl(); throw new Error('missing PKCE verifier'); }
+    const verifier = t.verifier;
 
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -202,9 +276,9 @@
       throw Object.assign(new Error(detail.error_description || detail.error || 'token exchange failed'), { status: r.status });
     }
     writeTokens(await r.json());
-    const back = store.get(KEY_RETURN) || '#/dashboard';
-    store.del(KEY_RETURN);
-    cleanUrl(back);
+    // The transaction was already erased from both stores above; `ret` came
+    // with it, so nothing is left behind after a successful sign-in.
+    cleanUrl(t.ret || '#/dashboard');
     return true;
   }
 
@@ -235,7 +309,7 @@
   function logout() {
     const t = readTokens();
     writeTokens(null);
-    store.del(KEY_STATE); store.del(KEY_VERIFIER); store.del(KEY_RETURN);
+    tx.clear();
     if (!configured()) { location.hash = '#/dashboard'; location.reload(); return; }
     const p = new URLSearchParams({
       client_id: OIDC.clientId,
@@ -249,6 +323,6 @@
     configured, login, completeLogin, refresh, logout,
     accessToken, isAuthenticated, claims,
     setNavigator,
-    _internals: { s256, randomString, readTokens, writeTokens },
+    _internals: { s256, randomString, readTokens, writeTokens, tx, TX_TTL_MS },
   };
 })();
