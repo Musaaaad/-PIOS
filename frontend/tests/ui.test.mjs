@@ -265,8 +265,19 @@ describe('API errors are visible, never silent', () => {
     const box = doc.getElementById('pageError');
     assert.equal(box.hidden, false, 'an error box must be shown');
     assert.match(box.textContent, /HTTP 401/, 'the HTTP status must be surfaced');
-    assert.match(box.textContent, /الطلب مرفوض/, 'a 401 must be named in Arabic as a rejection');
-    assert.match(box.textContent, /OIDC/, 'a 401 must name the missing prerequisite');
+    // Sprint 23.8 sharpened this wording: a 401 is a SESSION verdict, so the
+    // message must say the session was not accepted and what to do about it,
+    // rather than the older generic "request rejected". It must also carry the
+    // backend's own reason so the cause is never hidden.
+    assert.match(box.textContent, /لم تُقبل الجلسة/, 'a 401 must be named in Arabic as a session rejection');
+    assert.match(box.textContent, /تسجيل الدخول من جديد/, 'a 401 must tell the user to sign in again');
+    assert.match(box.textContent, /Bearer token required/, "the backend's own reason must be surfaced");
+    // It must NOT claim the identity provider is unconfigured. That was the
+    // old 401 wording and it is misleading: an unconfigured provider is now a
+    // 503, and saying it here sends the operator hunting a settings problem
+    // that does not exist.
+    assert.doesNotMatch(box.textContent, /لم يتم ضبط هوية مؤسسية/,
+      'a 401 must not be described as a missing identity-provider configuration');
   });
 
   test('failed standard open reports the status instead of doing nothing', async () => {

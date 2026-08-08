@@ -45,7 +45,10 @@
     if(e&&e.timeout) return t(`لم يستجب الخادم خلال المهلة المحددة (${e.message}). قد تكون الخدمة في وضع السكون؛ أعد المحاولة.`,`The backend did not respond within the timeout (${e.message}). It may have been idle - please retry.`);
     if(e&&e.network) return t(`فشل الاتصال بالخادم قبل وصول أي استجابة HTTP (${e.message}). السبب الغالب: حجب CORS — يجب ضبط PIOS_CORS_ORIGINS على الواجهة الخلفية ليشمل ${location.origin} — أو تعذّر الوصول للشبكة/الشهادة.`,`Network failure before any HTTP response (${e.message}). Most likely CORS: the backend's PIOS_CORS_ORIGINS must include ${location.origin}. Otherwise DNS/TLS/offline.`);
     const st=e&&e.status;
-    if(st===401||st===403) return t(`الطلب مرفوض (HTTP ${st}): يلزم تسجيل الدخول عبر OIDC. لم يتم ضبط هوية مؤسسية بعد.`,`Rejected (HTTP ${st}): OIDC sign-in required. No institutional identity is configured yet.`);
+    const srv=e&&e.body&&e.body.detail?String(e.body.detail):'';
+    if(st===401) return t(`لم تُقبل الجلسة (HTTP 401): يلزم تسجيل الدخول من جديد.${srv?' — '+srv:''}`,`Session not accepted (HTTP 401): sign in again.${srv?' - '+srv:''}`);
+    if(st===403) return t(`ليست لديك صلاحية لهذا الإجراء (HTTP 403).${srv?' — '+srv:''}`,`You do not have permission for this (HTTP 403).${srv?' - '+srv:''}`);
+    if(st===503) return t(`الخدمة أو مزود الهوية غير متاح حاليًا (HTTP 503).${srv?' — '+srv:''}`,`The service or identity provider is unavailable (HTTP 503).${srv?' - '+srv:''}`);
     const s=st?` (HTTP ${st})`:'';
     const detail=e&&e.message?e.message:'unknown';
     return t(`تعذّر تنفيذ الطلب${s}: ${detail}`,`Request failed${s}: ${detail}`)
@@ -174,7 +177,11 @@
         // A live API answered (or failed to). Say so; never dress demo data as real.
         state.overview=null;state.worklist=[];state.notifications=[];state.standards=[];
         state.identity=identityFromToken();state.demo=false;state.demoReason=null;
-        state.phase=(e&&(e.status===401||e.status===403))?'denied':'error';
+        // 401, 403 and 503 mean three different things and need three
+        // different responses. Collapsing them is what made a live
+        // authentication failure read as "you have no permission".
+        const st=e&&e.status;
+        state.phase = st===403 ? 'denied' : st===401 ? 'auth' : 'error';
         state.fault={status:e&&e.status,message:apiErrorText(e),timeout:!!(e&&e.timeout)};
       }
     }
@@ -228,6 +235,7 @@
    */
   function mainHtml(){
     if(state.phase==='loading') return loadingView();
+    if(state.phase==='auth') return authView();
     if(state.phase==='denied') return deniedView();
     if(state.phase==='error') return faultView();
     return (renderers[route()]||dashboard)();
@@ -253,7 +261,21 @@
       <dt>${t('أدوار PIOS المُسندة','Assigned PIOS roles')}</dt><dd>${usable.length?usable.map(pill).join(' '):`<strong>${t('لا شيء','none')}</strong>`}</dd></dl>
       <div class="notice Warning">${t('يلزم أن يُسند مسؤول الهوية أحد أدوار PIOS التالية إلى حسابك في نطاق pios:','An identity administrator must assign one of these PIOS realm roles to your account in the pios realm:')}
         <div style="margin-top:.6rem">${PIOS_ROLES.map(pill).join(' ')}</div></div>
+      ${state.fault?.message?`<p class="muted">${esc(state.fault.message)}</p>`:''}
       <button id="retryBoot" class="btn secondary" style="margin-top:1rem">${t('إعادة المحاولة','Try again')}</button>
+      <button id="signOutDenied" class="btn secondary" style="margin-top:1rem">${t('تسجيل الخروج','Sign out')}</button></section>`;
+  }
+
+  /* 401: the backend rejected the SESSION, not the permissions. Saying "no
+   * permission" here is wrong and unactionable - a new role would not help, and
+   * the fix is to sign in again. api() has already attempted one silent refresh
+   * by the time we get here, so the session is genuinely unusable. */
+  function authView(){
+    shellTitle('انتهت الجلسة','Session no longer valid');
+    return `<section class="card"><div class="section-title"><h2>${t('انتهت صلاحية جلستك أو رُفضت','Your session has expired or was rejected')}</h2>${pill(401)}</div>
+      <p>${t('تمت المصادقة سابقًا، لكن الواجهة الخلفية لم تقبل الجلسة الحالية. هذا ليس نقصًا في الصلاحيات — أعد تسجيل الدخول.','You were signed in, but the backend no longer accepts this session. This is not a permissions problem - sign in again.')}</p>
+      ${state.fault?.message?`<p class="muted">${esc(state.fault.message)}</p>`:''}
+      <button id="reAuth" class="btn" style="margin-top:1rem">${t('تسجيل الدخول من جديد','Sign in again')}</button>
       <button id="signOutDenied" class="btn secondary" style="margin-top:1rem">${t('تسجيل الخروج','Sign out')}</button></section>`;
   }
 
@@ -263,11 +285,12 @@
     const f=state.fault||{};
     return `<section class="card"><div class="section-title"><h2>${t('تعذّر الوصول إلى الخادم','The backend could not be reached')}</h2>${pill(f.status||(f.timeout?'timeout':'network'))}</div>
       <p>${esc(f.message||t('خطأ غير معروف','Unknown error'))}</p>
+      ${f.status===503?`<div class="notice Warning">${t('مزود الهوية أو الخدمة غير متاح حاليًا. هذه مشكلة في الخدمة وليست في حسابك — أعد المحاولة بعد قليل.','The identity provider or service is currently unavailable. This is a service problem, not an account problem - retry shortly.')}</div>`:''}
       ${f.timeout?`<div class="notice Warning">${t('لم يستجب الخادم خلال المهلة. قد تكون الخدمة في وضع السكون وتحتاج إلى إعادة المحاولة بعد لحظات.','The backend did not answer within the timeout. It may have been idle and needs a moment - try again.')}</div>`:''}
       <button id="retryBoot" class="btn" style="margin-top:1rem">${t('إعادة المحاولة','Try again')}</button></section>`;
   }
   function renderAlerts(){$('#alertsList').innerHTML=state.notifications.length?state.notifications.map(n=>`<article class="notice ${n.severity}"><div class="section-title"><strong>${esc(n.title)}</strong>${pill(n.severity)}</div><p>${esc(n.message)}</p><button class="btn secondary" onclick="location.hash='${esc(n.action_url||'#/dashboard')}'">${t('فتح','Open')}</button></article>`).join(''):`<div class="empty">${t('لا توجد تنبيهات','No alerts')}</div>`}
-  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});wire('#sessionLogout',()=>doLogout());wire('#sessionLogin',()=>doLogin());wire('#retryBoot',()=>load());wire('#signOutDenied',()=>doLogout());markUnwiredControls()}
+  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});wire('#sessionLogout',()=>doLogout());wire('#sessionLogin',()=>doLogin());wire('#retryBoot',()=>load());wire('#reAuth',()=>doLogin());wire('#signOutDenied',()=>doLogout());markUnwiredControls()}
   $('#alertsBtn').onclick=()=>{$('#alertDrawer').classList.add('open');$('#alertDrawer').setAttribute('aria-hidden','false')};$('#closeDrawer').onclick=()=>{$('#alertDrawer').classList.remove('open');$('#alertDrawer').setAttribute('aria-hidden','true')};$('#refreshBtn').onclick=load;$('#langBtn').onclick=()=>{state.lang=state.lang==='ar'?'en':'ar';storage.set('pios-lang',state.lang);render()};$('#demoBtn').onclick=()=>{state.demo=!state.demo;load()};$('#menuBtn').onclick=()=>toggleSidebar();
   $('#navBackdrop')?.addEventListener('click',closeSidebar);
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSidebar();$('#alertDrawer')?.classList.remove('open');$('#alertDrawer')?.setAttribute('aria-hidden','true')}});
