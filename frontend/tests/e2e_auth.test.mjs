@@ -22,7 +22,7 @@
 import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync, readdirSync } from 'node:fs';
 import { createServer } from 'node:https';
 import { execFileSync as _exec } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -47,7 +47,48 @@ import { chromium } from 'playwright';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..');
-const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+
+/* Resolving Chromium.
+ *
+ * The canonical path is Playwright's own: `npx playwright install chromium`
+ * puts the build this Playwright version expects where it expects it, and
+ * `chromium.launch()` finds it with no configuration. CI does exactly that.
+ *
+ * An earlier revision of this file hard-coded an absolute path to a Chromium
+ * that happened to exist on the machine it was written on. That path does not
+ * exist on a GitHub Actions runner, so `before()` threw and all 12 tests were
+ * reported as cancelled. Never hard-code a browser path here.
+ *
+ * The fallback below exists only for sandboxes that pre-install a browser
+ * whose build number differs from the one this Playwright pins (via
+ * PLAYWRIGHT_BROWSERS_PATH). It is tried ONLY after the default fails, and if
+ * neither works the error is rethrown - a missing browser must fail the suite
+ * loudly, never skip it.
+ */
+const LAUNCH_ARGS = ['--no-sandbox'];
+
+function discoverLocalChromium() {
+  const explicit = process.env.PIOS_E2E_CHROMIUM;
+  if (explicit && existsSync(explicit)) return explicit;
+  const root = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  if (!root || !existsSync(root)) return null;
+  for (const entry of readdirSync(root)) {
+    if (!entry.startsWith('chromium-')) continue;
+    const candidate = join(root, entry, 'chrome-linux', 'chrome');
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+async function launchChromium() {
+  try {
+    return await chromium.launch({ args: LAUNCH_ARGS });
+  } catch (err) {
+    const fallback = discoverLocalChromium();
+    if (!fallback) throw err;
+    return chromium.launch({ executablePath: fallback, args: LAUNCH_ARGS });
+  }
+}
 
 // The one account that exists in this controlled realm.
 const USER = { username: 'pilot.lead', password: 'correct-horse-battery', sub: 'f1e2d3c4-turaif-pilot' };
@@ -203,7 +244,7 @@ before(async () => {
     send(res, 200, TYPES[extname(target)] || 'text/plain', readFileSync(target));
   }));
 
-  browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
+  browser = await launchChromium();
 });
 
 after(async () => {

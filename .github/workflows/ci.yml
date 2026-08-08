@@ -16,5 +16,12 @@ jobs:
       # deploy/render/build_frontend.sh and drive it in jsdom, so they cover
       # what Render and Pages actually publish rather than source alone.
       - run: cd frontend && npm ci
+      # frontend/tests/e2e_auth.test.mjs drives a real Chromium. `npm ci`
+      # installs the Playwright package but deliberately not the browser
+      # binary, so it has to be fetched explicitly - otherwise the suite's
+      # before() hook fails to launch and every test in it is cancelled.
+      # Driven by the version in package-lock.json, so the build fetched is
+      # always the one this Playwright pins.
+      - run: cd frontend && npx playwright install --with-deps chromium
       - run: cd frontend && npm test
       - run: docker compose build api frontend
