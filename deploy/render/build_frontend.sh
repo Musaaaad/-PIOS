@@ -15,6 +15,11 @@
 #                       When empty the site builds in demo mode.
 #   PIOS_DEMO_MODE      Force demo mode on/off. Defaults to demo mode when
 #                       PIOS_API_BASE_URL is empty, live mode when it is set.
+#   PIOS_REQUEST_TIMEOUT_MS
+#                       How long an API call may take before the app shows a
+#                       retryable "backend unreachable" state. Defaults to
+#                       25000. Raise it if the backend is on a plan whose
+#                       instances sleep and cold-start slowly.
 #   OUT_DIR             Output directory. Defaults to ./dist.
 #
 # Usage:  bash deploy/render/build_frontend.sh
@@ -33,6 +38,9 @@ elif [ -n "$API_BASE" ]; then
 else
   DEMO=true
 fi
+
+TIMEOUT_MS="${PIOS_REQUEST_TIMEOUT_MS:-25000}"
+case "$TIMEOUT_MS" in ''|*[!0-9]*) echo "[build_frontend] FATAL: PIOS_REQUEST_TIMEOUT_MS must be an integer, got '$TIMEOUT_MS'" >&2; exit 1;; esac
 
 echo "[build_frontend] source : $SRC"
 echo "[build_frontend] output : $OUT"
@@ -64,6 +72,7 @@ window.PIOS_CONFIG = {
   demoMode: ${DEMO},
   defaultToken: "",
   refreshSeconds: 60,
+  requestTimeoutMs: ${TIMEOUT_MS},
   appVersion: "1.0.0",
   oidc: {
     issuer: "${PIOS_OIDC_ISSUER:-}",

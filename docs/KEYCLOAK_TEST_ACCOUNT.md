@@ -60,6 +60,36 @@ sensitive — `[pios-auth] CALLBACK_RECEIVED STATE_MISMATCH` and similar, or
 (Keycloak rejects, the app is never reached) from a callback or token-exchange
 problem (the app is reached and reports the stage).
 
+## A role is required, and its absence is now visible
+
+Step 6 is not optional. The backend denies by default: a token carrying no PIOS
+role is refused on every endpoint, so an account created without one can sign in
+and still do nothing.
+
+Keycloak always issues some roles — `default-roles-pios`, `offline_access`,
+`uma_authorization` — and the realm's role mapper copies them into the `roles`
+claim. They look like roles but grant nothing here, so a token can appear
+populated while carrying no PIOS role at all.
+
+Until Sprint 23.7 this produced demo data on screen: the app fell back to its
+demo dataset and the user chip showed the demo identity's role. The app now
+states the situation plainly instead — it names the roles on the account, shows
+that none is a PIOS role, and lists the nine that would grant access. So if you
+see that screen, the fix is step 6, not a code change.
+
+**Assignment must be a realm role, not a client role.** `pios-realm.json`
+defines all nine under `roles.realm`, and the mapper is
+`oidc-usermodel-realm-role-mapper` — a client role would never reach the `roles`
+claim the backend reads.
+
+### Optionally, grant a baseline role to every user
+
+Adding a PIOS role to the realm's `default-roles-pios` composite means every new
+account gets it automatically, which removes this manual step for good. That is
+a **policy decision, not a defect fix**, so it is deliberately not applied here:
+it grants access to anyone who can authenticate. `ReadOnlyAuditor` is the only
+one worth considering. Decide it before a pilot with real users.
+
 ## Role reference
 
 `SystemAdmin`, `AccreditationLead`, `PharmacyDirector`, `MedicationSafety`,
