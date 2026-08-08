@@ -4,12 +4,29 @@
   const D = window.PIOS_DEMO || {};
   const storage = {get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
   const AUTH = window.PIOS_AUTH || null;
-  const state = {lang:storage.get('pios-lang')||'ar', demo:new URLSearchParams(location.search).get('demo')==='1'||C.demoMode, token:null, overview:null, worklist:[], notifications:[], standards:[], demoReason:null};
+  const state = {lang:storage.get('pios-lang')||'ar', demo:new URLSearchParams(location.search).get('demo')==='1'||C.demoMode, token:null, overview:null, worklist:[], notifications:[], standards:[], demoReason:null, phase:'idle', fault:null};
   const $=s=>document.querySelector(s); const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const t=(ar,en)=>state.lang==='ar'?ar:en;
   const nav=[['dashboard','◫','لوحة التشغيل','Operations'],['worklist','☑','قائمة عملي','My Worklist'],['readiness','◉','الجاهزية وESR','Readiness & ESR'],['evidence','▣','الأدلة','Evidence'],['findings','⚠','Findings وCAPA','Findings & CAPA'],['documents','▤','الوثائق','Documents'],['exports','⇩','مركز التصدير','Export Center'],['pilot','◆','مركز التجربة','Pilot Center'],['deployment','⬡','قبول النشر','Deployment Acceptance'],['operations','◎','مركز التشغيل','Command Center'],['assurance','↻','الضمان المستمر','Continuous Assurance'],['intelligence','✦','الذكاء والمخاطر','Intelligence & Risk'],['actions','➜','من الذكاء إلى العمل','Intelligence to Action'],['committee','♙','اللجنة وجودة القرار','Committee & Decision Quality'],['institutional-pilot','◒','التجربة المؤسسية','Institutional Pilot'],['governance','◈','الحوكمة والإصدارات','Governance & Releases'],['security','⌾','الهوية والتشغيل','Identity & Runtime']];
+  // The nine role codes defined in deploy/keycloak/pios-realm.json. Used only to
+  // separate a real PIOS role from Keycloak's own defaults (default-roles-pios,
+  // offline_access, uma_authorization), which every user carries and which grant
+  // nothing here.
+  const PIOS_ROLES=['SystemAdmin','AccreditationLead','PharmacyDirector','MedicationSafety','EvidenceCollector','EvidenceReviewer','CAPAOwner','CAPAVerifier','ReadOnlyAuditor'];
   const liveApiConfigured=()=>C.demoMode!==true&&!!C.apiBase;
-  const rawFetch=async(path,opts,token)=>{const headers={'Content-Type':'application/json',...opts.headers}; if(token) headers['Authorization']=`Bearer ${token}`; const url=C.apiBase+path; let r; try{r=await fetch(url,{...opts,headers})}catch(err){throw Object.assign(new Error(err&&err.message?err.message:'network failure'),{network:true,url})} return {r,url}};
+  // A request that never settles used to stall the whole first paint, because
+  // render() only ran after load() finished. On a platform whose free instances
+  // sleep, that is a routine condition, not an edge case - so every call is
+  // bounded and a stalled backend becomes a visible, actionable state.
+  const REQUEST_TIMEOUT_MS=Number(C.requestTimeoutMs)>0?Number(C.requestTimeoutMs):25000;
+  const rawFetch=async(path,opts,token)=>{const headers={'Content-Type':'application/json',...opts.headers}; if(token) headers['Authorization']=`Bearer ${token}`; const url=C.apiBase+path; let r;
+    const ctrl=typeof AbortController!=='undefined'?new AbortController():null;
+    const timer=ctrl?setTimeout(()=>ctrl.abort(),REQUEST_TIMEOUT_MS):null;
+    try{r=await fetch(url,{...opts,headers,...(ctrl?{signal:ctrl.signal}:{})})}
+    catch(err){const aborted=ctrl&&ctrl.signal.aborted;
+      throw Object.assign(new Error(aborted?`no response within ${Math.round(REQUEST_TIMEOUT_MS/1000)}s`:(err&&err.message?err.message:'network failure')),{network:true,timeout:!!aborted,url})}
+    finally{if(timer)clearTimeout(timer)}
+    return {r,url}};
   const api=async(path,opts={})=>{if(!liveApiConfigured()) throw Object.assign(new Error('demo'),{demo:true});
     let {r,url}=await rawFetch(path,opts,AUTH?AUTH.accessToken():null);
     // A 401 may simply mean the access token aged out. Try one silent refresh
@@ -25,6 +42,7 @@
   // status code the user asks for genuinely does not exist.
   function apiErrorText(e){
     if(e&&e.demo) return t('وضع العرض التجريبي مفعّل: لا يوجد اتصال بالخادم.','Demo mode is active: no backend connection.');
+    if(e&&e.timeout) return t(`لم يستجب الخادم خلال المهلة المحددة (${e.message}). قد تكون الخدمة في وضع السكون؛ أعد المحاولة.`,`The backend did not respond within the timeout (${e.message}). It may have been idle - please retry.`);
     if(e&&e.network) return t(`فشل الاتصال بالخادم قبل وصول أي استجابة HTTP (${e.message}). السبب الغالب: حجب CORS — يجب ضبط PIOS_CORS_ORIGINS على الواجهة الخلفية ليشمل ${location.origin} — أو تعذّر الوصول للشبكة/الشهادة.`,`Network failure before any HTTP response (${e.message}). Most likely CORS: the backend's PIOS_CORS_ORIGINS must include ${location.origin}. Otherwise DNS/TLS/offline.`);
     const st=e&&e.status;
     if(st===401||st===403) return t(`الطلب مرفوض (HTTP ${st}): يلزم تسجيل الدخول عبر OIDC. لم يتم ضبط هوية مؤسسية بعد.`,`Rejected (HTTP ${st}): OIDC sign-in required. No institutional identity is configured yet.`);
@@ -114,7 +132,64 @@
   function closeSidebar(){const s=sidebarEl();if(s)s.classList.remove('open');const b=backdropEl();if(b){b.classList.remove('show');b.hidden=true}const m=$('#menuBtn');if(m)m.setAttribute('aria-expanded','false');document.body.classList.remove('nav-open')}
   function openSidebar(){const s=sidebarEl();if(s)s.classList.add('open');const b=backdropEl();if(b){b.hidden=false;b.classList.add('show')}const m=$('#menuBtn');if(m)m.setAttribute('aria-expanded','true');document.body.classList.add('nav-open')}
   function toggleSidebar(){isSidebarOpen()?closeSidebar():openSidebar()}
-  async function load(){try{const [overview,work,notes,identity]=await Promise.all([api('/dashboard/overview'),api('/worklists/my'),api('/notifications?status=Unread'),api('/identity/me')]);state.overview=overview;state.worklist=work.items;state.notifications=notes;state.identity=identity;state.demo=false;state.demoReason=null;try{const sd=await api('/dashboard/standards');state.standards=(sd&&sd.standards)||[]}catch(e){state.standards=[]}}catch(e){state.overview=D.overview;state.worklist=D.worklist;state.notifications=D.notifications;state.identity=D.identity;state.standards=[];state.demo=true;state.demoReason=e&&e.demo?null:apiErrorText(e)}render()}
+  /* Bootstrap.
+   *
+   * Two rules this earns its length for:
+   *
+   * 1. The shell paints BEFORE any request. render() used to run only after all
+   *    four calls settled, so while the backend was slow, asleep or
+   *    unreachable the user sat on the static markup - empty navigation, empty
+   *    main, no explanation. That is the blank screen reported after a
+   *    successful sign-in, and it is indistinguishable from a broken app.
+   *
+   * 2. A live API that REJECTS the user must never fall back to demo data.
+   *    401/403 previously loaded the demo dataset, so someone with no assigned
+   *    role saw a populated dashboard and a user chip reading the demo
+   *    identity's role. Demo data is only legitimate when no live API is
+   *    configured at all.
+   */
+  async function load(){
+    state.phase='loading'; state.fault=null;
+    render();                                   // shell + skeleton, immediately
+    try{
+      const [overview,work,notes,identity]=await Promise.all([api('/dashboard/overview'),api('/worklists/my'),api('/notifications?status=Unread'),api('/identity/me')]);
+      state.overview=overview;state.worklist=(work&&work.items)||[];state.notifications=notes||[];state.identity=identity;state.demo=false;state.demoReason=null;
+      try{const sd=await api('/dashboard/standards');state.standards=(sd&&sd.standards)||[]}catch(e){state.standards=[]}
+      state.phase='ready';
+    }catch(e){
+      // Demo data is legitimate in exactly two situations, and both are
+      // labelled: no live API is configured at all, or nobody is signed in
+      // (the pre-OIDC posture - gating on a sign-in that cannot exist would
+      // lock the app out entirely).
+      //
+      // What is NOT legitimate is the case this sprint fixes: a signed-in user
+      // whose live API rejects them. That used to load the demo dataset, so an
+      // account with no assigned role saw a populated dashboard and the demo
+      // identity's role in the user chip.
+      const signedIn=!!(AUTH&&AUTH.isAuthenticated());
+      if((e&&e.demo)||!signedIn){
+        state.overview=D.overview;state.worklist=D.worklist;state.notifications=D.notifications;state.identity=D.identity;state.standards=[];
+        state.demo=true;state.demoReason=e&&e.demo?null:apiErrorText(e);state.phase='ready';
+      } else {
+        // A live API answered (or failed to). Say so; never dress demo data as real.
+        state.overview=null;state.worklist=[];state.notifications=[];state.standards=[];
+        state.identity=identityFromToken();state.demo=false;state.demoReason=null;
+        state.phase=(e&&(e.status===401||e.status===403))?'denied':'error';
+        state.fault={status:e&&e.status,message:apiErrorText(e),timeout:!!(e&&e.timeout)};
+      }
+    }
+    render();
+  }
+
+  /** Identity from the verified session's own token - display only. */
+  function identityFromToken(){
+    const c=AUTH&&AUTH.claims?AUTH.claims():null;
+    if(!c) return null;
+    const roles=Array.isArray(c[C.rolesClaim||'roles'])?c[C.rolesClaim||'roles']:[];
+    return {user_id:c.sub||'',display_name:c.name||c.preferred_username||'',
+            roles:roles.filter(r=>PIOS_ROLES.includes(r)),all_roles:roles,
+            site_codes:Array.isArray(c.sites)?c.sites:[],auth_source:'oidc'};
+  }
   const pill=(s)=>`<span class="pill ${esc(s)}">${esc(s)}</span>`;
   function shellTitle(ar,en){$('#pageTitle').textContent=t(ar,en);$('#pageEyebrow').textContent=state.overview?.site?.[state.lang==='ar'?'name_ar':'name_en']||'TGH'}
   function kpi(label,value,hint,cls=''){return `<article class="card kpi"><div class="label">${label}</div><div class="value ${cls}">${value}</div><div class="hint">${hint}</div></article>`}
@@ -144,9 +219,55 @@
 
   function institutionalPilot(){shellTitle('التجربة المؤسسية ونتائجها','Institutional Pilot & Outcomes');const p=D.institutional_pilot||{};const metrics=p.metrics||[];const sessions=p.sessions||[];return `<section class="grid kpis">${kpi(t('وضع التشغيل','Run mode'),p.run_mode||'Synthetic',t('مؤسسي أو اصطناعي','Institutional or synthetic'),p.run_mode==='Institutional'?'good':'warning')}${kpi(t('هويات موثقة','Verified identities'),p.verified_identities||0,t('OIDC + role + site','OIDC + role + site'))}${kpi(t('جلسات مكتملة','Completed sessions'),p.completed_sessions||0,t('حوكمة + قرار + جودة','Governance + decision + quality'))}${kpi(t('مؤشرات مقاسة','Measured metrics'),metrics.length,t('لا تساوي امتثالاً','Not compliance'))}${kpi(t('تقارير منشورة','Published reports'),p.published_reports||0,t('بموافقة بشرية وSHA-256','Human approval + SHA-256'))}</section><section class="grid section-grid"><article class="card"><div class="section-title"><h2>${t('بوابات التفعيل','Activation gates')}</h2>${pill(p.status||'Draft')}</div><ol><li>${t('لجنة فعالة وميثاق معتمد','Active committee and approved charter')}</li><li>${t('هويات OIDC ونطاق TGH موثقان','Verified OIDC identities and TGH scope')}</li><li>${t('مصادر بيانات مصنفة ومجردة من المعرفات','Classified, deidentified data sources')}</li><li>${t('لا توجد حوادث P0/P1 تشغيلية مفتوحة','No open operational P0/P1 incidents')}</li><li>${t('قرار Pilot Go أو ConditionalGo عند الربط','Pilot Go or ConditionalGo when linked')}</li></ol><div class="notice Warning">${t('نتيجة التجربة لا تعتمد الامتثال ولا تنشر EvidenceReady.','Pilot outcomes do not approve compliance or publish EvidenceReady.')}</div></article><article class="card"><div class="section-title"><h2>${t('تبني المستخدمين والتغذية الراجعة','Adoption & feedback')}</h2>${pill(p.average_feedback??'—')}</div><dl><dt>${t('أحداث التبني','Adoption events')}</dt><dd>${p.adoption_events||0}</dd><dt>${t('سجلات التغذية الراجعة','Feedback records')}</dt><dd>${p.feedback_count||0}</dd><dt>${t('الحالة','Status')}</dt><dd>${esc(p.status||'Draft')}</dd></dl><div class="notice Normal">${t('يتم ترميز هوية المشارك ولا يسمح ببيانات المرضى في التعليقات.','Participant identity is tokenized and patient data is prohibited in feedback.')}</div></article></section><section class="card" style="margin-top:1rem"><div class="section-title"><h2>${t('الجلسات والمؤشرات','Sessions & metrics')}</h2><button class="btn secondary">${t('تقييم البوابات','Evaluate gates')}</button></div><div class="table-wrap"><table><thead><tr><th>${t('العنصر','Item')}</th><th>${t('الحالة','Status')}</th><th>${t('القيمة الحالية','Current')}</th><th>${t('الهدف','Target')}</th><th>${t('المرجع','Evidence')}</th></tr></thead><tbody>${metrics.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${pill(x.status)}</td><td>${esc(x.current_value??'—')} ${esc(x.unit||'')}</td><td>${esc(x.target_value??'—')} ${esc(x.unit||'')}</td><td>${esc(x.source_reference||'—')}</td></tr>`).join('')||sessions.map(x=>`<tr><td><strong>${esc(x.code)}</strong></td><td>${pill(x.status)}</td><td>${x.decision_count||0} ${t('قرار','decisions')}</td><td>${x.quality_review_count||0} ${t('مراجعة جودة','quality reviews')}</td><td>${esc(x.evidence_reference||'—')}</td></tr>`).join('')||`<tr><td colspan="5" class="empty">${t('لا توجد نتائج مؤسسية بعد','No institutional outcomes recorded')}</td></tr>`}</tbody></table></div></section>`}
   const renderers={dashboard,worklist,readiness,evidence,findings,documents,exports,pilot,deployment,operations,assurance,intelligence,actions,committee,institutionalPilot,'institutional-pilot':institutionalPilot,governance,security};
-  function render(){setDir();renderNav();$('#version').textContent=C.appVersion||'0.1.0';$('#userName').textContent=state.identity?.display_name||t('مستخدم المنصة','PIOS User');$('#userRole').textContent=(state.identity?.roles||[])[0]||'';const av=document.querySelector('.user-chip .avatar');if(av)av.textContent=($('#userName').textContent||'').trim().charAt(0);const lo=$('#logoutBtn'); if(lo) lo.hidden=!(AUTH&&AUTH.isAuthenticated());$('#alertBadge').textContent=state.notifications.length;$('#demoNotice').hidden=!state.demo;$('#demoNotice').textContent=state.demo?(state.demoReason?`${D.notice} — ${state.demoReason}`:D.notice):'';$('#main').innerHTML=(renderers[route()]||dashboard)();renderAlerts();bindPage()}
+  function render(){setDir();renderNav();$('#version').textContent=C.appVersion||'0.1.0';$('#userName').textContent=state.identity?.display_name||t('مستخدم المنصة','PIOS User');$('#userRole').textContent=(state.identity?.roles||[])[0]||'';const av=document.querySelector('.user-chip .avatar');if(av)av.textContent=($('#userName').textContent||'').trim().charAt(0);const lo=$('#logoutBtn'); if(lo) lo.hidden=!(AUTH&&AUTH.isAuthenticated());$('#alertBadge').textContent=state.notifications.length;$('#demoNotice').hidden=!state.demo;$('#demoNotice').textContent=state.demo?(state.demoReason?`${D.notice} — ${state.demoReason}`:D.notice):'';$('#main').innerHTML=mainHtml();renderAlerts();bindPage()}
+
+  /* What goes in #main.
+   *
+   * Every branch produces something the user can read and act on. There is no
+   * path here that yields an empty page: that was the defect.
+   */
+  function mainHtml(){
+    if(state.phase==='loading') return loadingView();
+    if(state.phase==='denied') return deniedView();
+    if(state.phase==='error') return faultView();
+    return (renderers[route()]||dashboard)();
+  }
+
+  function loadingView(){
+    shellTitle('لوحة التشغيل','Operations Dashboard');
+    return `<section class="card" aria-busy="true"><div class="section-title"><h2>${t('جارٍ تحميل بيانات المنصة…','Loading platform data…')}</h2></div>
+      <p class="muted">${t('قد تستغرق أول محاولة وقتًا أطول إذا كانت الخدمة في وضع السكون.','The first request can take longer if the service was idle.')}</p>
+      <div class="progress" aria-hidden="true"><span style="width:35%"></span></div></section>`;
+  }
+
+  /* Authenticated, but the API refuses. The user needs to know WHICH roles they
+   * actually carry and which are required - not a dashboard of demo numbers. */
+  function deniedView(){
+    shellTitle('لا توجد صلاحية','Access not granted');
+    const mine=(state.identity&&state.identity.all_roles)||[];
+    const usable=(state.identity&&state.identity.roles)||[];
+    return `<section class="card"><div class="section-title"><h2>${t('تم تسجيل دخولك، لكن لا توجد صلاحية للمنصة','You are signed in, but no platform role is assigned')}</h2>${pill(state.fault?.status||403)}</div>
+      <p>${t('تمت المصادقة بنجاح لدى مزود الهوية، ولم يُسند إلى حسابك أي دور من أدوار PIOS، لذلك ترفض الواجهة الخلفية الطلبات.','Authentication with the identity provider succeeded, but your account carries no PIOS role, so the backend rejects every request.')}</p>
+      <dl><dt>${t('المستخدم','User')}</dt><dd>${esc(state.identity?.display_name||state.identity?.user_id||'—')}</dd>
+      <dt>${t('الأدوار الحالية','Roles on your account')}</dt><dd>${mine.length?mine.map(pill).join(' '):t('لا شيء','none')}</dd>
+      <dt>${t('أدوار PIOS المُسندة','Assigned PIOS roles')}</dt><dd>${usable.length?usable.map(pill).join(' '):`<strong>${t('لا شيء','none')}</strong>`}</dd></dl>
+      <div class="notice Warning">${t('يلزم أن يُسند مسؤول الهوية أحد أدوار PIOS التالية إلى حسابك في نطاق pios:','An identity administrator must assign one of these PIOS realm roles to your account in the pios realm:')}
+        <div style="margin-top:.6rem">${PIOS_ROLES.map(pill).join(' ')}</div></div>
+      <button id="retryBoot" class="btn secondary" style="margin-top:1rem">${t('إعادة المحاولة','Try again')}</button>
+      <button id="signOutDenied" class="btn secondary" style="margin-top:1rem">${t('تسجيل الخروج','Sign out')}</button></section>`;
+  }
+
+  /* The API could not be reached or failed. Actionable, and retryable. */
+  function faultView(){
+    shellTitle('تعذّر تحميل البيانات','Could not load data');
+    const f=state.fault||{};
+    return `<section class="card"><div class="section-title"><h2>${t('تعذّر الوصول إلى الخادم','The backend could not be reached')}</h2>${pill(f.status||(f.timeout?'timeout':'network'))}</div>
+      <p>${esc(f.message||t('خطأ غير معروف','Unknown error'))}</p>
+      ${f.timeout?`<div class="notice Warning">${t('لم يستجب الخادم خلال المهلة. قد تكون الخدمة في وضع السكون وتحتاج إلى إعادة المحاولة بعد لحظات.','The backend did not answer within the timeout. It may have been idle and needs a moment - try again.')}</div>`:''}
+      <button id="retryBoot" class="btn" style="margin-top:1rem">${t('إعادة المحاولة','Try again')}</button></section>`;
+  }
   function renderAlerts(){$('#alertsList').innerHTML=state.notifications.length?state.notifications.map(n=>`<article class="notice ${n.severity}"><div class="section-title"><strong>${esc(n.title)}</strong>${pill(n.severity)}</div><p>${esc(n.message)}</p><button class="btn secondary" onclick="location.hash='${esc(n.action_url||'#/dashboard')}'">${t('فتح','Open')}</button></article>`).join(''):`<div class="empty">${t('لا توجد تنبيهات','No alerts')}</div>`}
-  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});wire('#sessionLogout',()=>doLogout());wire('#sessionLogin',()=>doLogin());markUnwiredControls()}
+  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});wire('#sessionLogout',()=>doLogout());wire('#sessionLogin',()=>doLogin());wire('#retryBoot',()=>load());wire('#signOutDenied',()=>doLogout());markUnwiredControls()}
   $('#alertsBtn').onclick=()=>{$('#alertDrawer').classList.add('open');$('#alertDrawer').setAttribute('aria-hidden','false')};$('#closeDrawer').onclick=()=>{$('#alertDrawer').classList.remove('open');$('#alertDrawer').setAttribute('aria-hidden','true')};$('#refreshBtn').onclick=load;$('#langBtn').onclick=()=>{state.lang=state.lang==='ar'?'en':'ar';storage.set('pios-lang',state.lang);render()};$('#demoBtn').onclick=()=>{state.demo=!state.demo;load()};$('#menuBtn').onclick=()=>toggleSidebar();
   $('#navBackdrop')?.addEventListener('click',closeSidebar);
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSidebar();$('#alertDrawer')?.classList.remove('open');$('#alertDrawer')?.setAttribute('aria-hidden','true')}});
