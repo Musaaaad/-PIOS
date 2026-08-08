@@ -257,6 +257,12 @@
 
     if (oidcError) {
       stage('CALLBACK_RECEIVED', 'IDP_ERROR');
+      // The attempt is over, so its transaction must go with it. Leaving the
+      // state and PKCE verifier behind broke the single-use guarantee: an
+      // unconsumed verifier survived in both stores and remained matchable by
+      // a later callback. Keycloak reports authentication_expired here, among
+      // others, and every one of them ends the attempt.
+      tx.clear();
       cleanUrl();
       throw new Error(q.get('error_description') || oidcError);
     }

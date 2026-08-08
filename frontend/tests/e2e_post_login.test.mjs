@@ -37,8 +37,8 @@ const IPHONE = { width: 390, height: 844 };
 let browser, idp, api, site, IDP_ORIGIN, API_ORIGIN, SITE_ORIGIN, DIST, kit;
 
 /** Per-test backend behaviour. */
-let backend = { mode: 'ok', roles: ['AccreditationLead'] };
-const resetBackend = () => { backend = { mode: 'ok', roles: ['AccreditationLead'] }; };
+let backend = { mode: 'ok', roles: ['AccreditationLead'], idpError: null };
+const resetBackend = () => { backend = { mode: 'ok', roles: ['AccreditationLead'], idpError: null }; };
 
 const OVERVIEW = {
   site: { code: 'TGH' },
@@ -62,8 +62,14 @@ before(async () => {
     if (req.method === 'POST' && u.pathname.endsWith('/openid-connect/auth')) {
       const q = u.searchParams;
       const back = new URL(q.get('redirect_uri'));
-      back.searchParams.set('code', 'code-' + Date.now());
-      back.searchParams.set('state', q.get('state'));
+      if (backend.idpError) {
+        // Keycloak returns the failure on the redirect, not as a code.
+        back.searchParams.set('error', backend.idpError);
+        back.searchParams.set('state', q.get('state'));
+      } else {
+        back.searchParams.set('code', 'code-' + Date.now());
+        back.searchParams.set('state', q.get('state'));
+      }
       return send(res, 302, 'text/plain', '', { Location: back.toString() });
     }
     if (u.pathname.endsWith('/token')) {
@@ -85,7 +91,8 @@ before(async () => {
 
     if (backend.mode === 'hang') return;                       // never answers
     if (backend.mode === '500') return json(res, 500, { detail: 'boom' });
-    if (backend.mode === '401') return json(res, 401, { detail: 'token rejected' });
+    if (backend.mode === '401') return json(res, 401, { detail: 'Invalid OIDC token: signature verification failed' });
+    if (backend.mode === '503') return json(res, 503, { detail: 'identity provider is not configured on this service' });
     // Deny by default: a token with no PIOS role is refused, as the real backend does.
     const pios = (claims.roles || []).filter(r => !kit.KEYCLOAK_DEFAULTS.includes(r));
     if (backend.mode === '403' || pios.length === 0) return json(res, 403, { detail: 'no mapped roles' });
@@ -145,6 +152,27 @@ async function signIn(page, { settle = true } = {}) {
   }
 }
 
+/** Signs out and waits for the provider's redirect to land back on the app.
+ *
+ * logout() navigates to the provider's end-session endpoint, which redirects
+ * back here. Issuing our own goto() while that is in flight aborts it with
+ * "interrupted by another navigation", so wait for it rather than race it. */
+async function signOutAndLand(page) {
+  await page.evaluate(() => window.PIOS_AUTH.logout());
+  await page.waitForURL(u => u.toString().startsWith(SITE_ORIGIN), { timeout: 25000 });
+  await page.waitForSelector('#loginScreen', { state: 'visible', timeout: 25000 });
+}
+
+/** Waits for a bootstrap cycle to start AND finish.
+ *
+ * Checking only for the absence of the busy flag races the click that triggers
+ * it: if the check runs first, the PREVIOUS render still satisfies it and the
+ * assertion reads stale content. Wait for busy to appear, then to clear. */
+async function awaitReload(page) {
+  await page.waitForSelector('#main [aria-busy="true"]', { timeout: 10000 }).catch(() => {});
+  await page.waitForFunction(() => !document.querySelector('#main [aria-busy="true"]'), { timeout: 25000 });
+}
+
 /** What the user can actually see. */
 const view = page => page.evaluate(() => {
   const vis = s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0; };
@@ -156,6 +184,7 @@ const view = page => page.evaluate(() => {
     demoVisible: vis('#demoNotice'),
     userRole: document.querySelector('#userRole')?.textContent || '',
     hasRetry: !!document.querySelector('#retryBoot'),
+    hasReAuth: !!document.querySelector('#reAuth'),
   };
 });
 
@@ -223,21 +252,57 @@ describe('scenario 2: authenticated without a PIOS role', () => {
 
 // ========================================= SCENARIOS 3/4/5 - backend rejections
 
-describe('scenario 3/4: backend rejects the token', () => {
-  for (const [label, mode] of [['401', '401'], ['403', '403']]) {
-    test(`a ${label} produces a readable state, not a blank screen`, async () => {
-      resetBackend(); backend.mode = mode;
-      const { ctx, page, errors } = await newPage();
-      try {
-        await signIn(page);
-        const v = await view(page);
-        assert.ok(v.mainText.length > 50, `${label} produced an empty page`);
-        assert.equal(v.demoVisible, false, `${label} must not fall back to demo data`);
-        assert.equal(v.navItems >= 10, true);
-        assert.deepEqual(errors, []);
-      } finally { await ctx.close(); }
-    });
-  }
+describe('scenario 3/4: 401, 403 and 503 are three different answers', () => {
+  /* The Sprint 23.8 defect: all three collapsed into "no permission". A 401
+   * told a user with a perfectly good role that they lacked permission, which
+   * is both wrong and unactionable - the fix is to sign in again, not to be
+   * granted something they already have. */
+
+  test('401 says the SESSION is the problem, not the permissions', async () => {
+    resetBackend(); backend.mode = '401';
+    const { ctx, page, errors } = await newPage();
+    try {
+      await signIn(page);
+      const v = await view(page);
+      assert.ok(/انتهت|expired|Session/i.test(v.mainText),
+        `a 401 must be reported as a session problem, got: ${v.mainText.slice(0, 140)}`);
+      assert.ok(!/لا توجد صلاحية|no platform role/i.test(v.mainText),
+        'a 401 must NOT be reported as missing permission - that is unactionable and false');
+      assert.equal(v.hasReAuth, true, 'a 401 must offer signing in again');
+      assert.equal(v.demoVisible, false);
+      assert.deepEqual(errors, []);
+    } finally { await ctx.close(); }
+  });
+
+  test('403 says the ROLE is the problem, and names the roles', async () => {
+    resetBackend(); backend.mode = '403';
+    const { ctx, page, errors } = await newPage();
+    try {
+      await signIn(page);
+      const v = await view(page);
+      assert.ok(/لا توجد صلاحية|no platform role/i.test(v.mainText),
+        `a 403 must be reported as an authorization problem, got: ${v.mainText.slice(0, 140)}`);
+      assert.ok(v.mainText.includes('AccreditationLead'), 'it must name the roles that grant access');
+      assert.ok(!/انتهت صلاحية جلستك|Your session has expired/i.test(v.mainText),
+        'a 403 must not be described as an expired session');
+      assert.deepEqual(errors, []);
+    } finally { await ctx.close(); }
+  });
+
+  test('503 blames the service, not the account', async () => {
+    resetBackend(); backend.mode = '503';
+    const { ctx, page, errors } = await newPage();
+    try {
+      await signIn(page);
+      const v = await view(page);
+      assert.ok(/غير متاح|unavailable/i.test(v.mainText),
+        `a 503 must be reported as a service outage, got: ${v.mainText.slice(0, 140)}`);
+      assert.ok(!/لا توجد صلاحية|no platform role/i.test(v.mainText),
+        'a service outage must never be described as a permissions problem');
+      assert.equal(v.hasRetry, true, 'an outage must be retryable');
+      assert.deepEqual(errors, []);
+    } finally { await ctx.close(); }
+  });
 });
 
 describe('scenario 5: bootstrap failure', () => {
@@ -312,10 +377,7 @@ describe('scenario 8: logout', () => {
     const { ctx, page } = await newPage();
     try {
       await signIn(page);
-      await page.evaluate(() => window.PIOS_AUTH.logout());
-      await page.waitForURL(u => !u.toString().includes('/realms/'), { timeout: 20000 }).catch(() => {});
-      await page.goto(`${SITE_ORIGIN}/`);
-      await page.waitForSelector('#loginScreen', { state: 'visible', timeout: 20000 });
+      await signOutAndLand(page);
       const cleared = await page.evaluate(() => ({
         tokens: sessionStorage.getItem('pios-oidc-tokens'),
         tx: sessionStorage.getItem('pios-oidc-tx') || localStorage.getItem('pios-oidc-tx'),
@@ -371,5 +433,80 @@ describe('the production artifact itself', () => {
   test('the login overlay still hides when hidden (Sprint 23.6 guard)', () => {
     const css = readFileSync(join(DIST, 'styles.css'), 'utf8');
     assert.match(css, /\.login-screen\[hidden\]\s*\{\s*display:\s*none/, 'the 23.6 CSS fix is missing from the build');
+  });
+});
+
+
+// ======================== a role granted AFTER sign-in (Sprint 23.8 section G)
+
+describe('a role granted after the session began', () => {
+  test('the existing token does not gain the role, and a fresh sign-in does', async () => {
+    resetBackend(); backend.roles = [];          // signed in before any grant
+    const { ctx, page } = await newPage();
+    try {
+      await signIn(page);
+      let v = await view(page);
+      assert.ok(/لا توجد صلاحية|no platform role/i.test(v.mainText),
+        'a user with no role must be told so');
+
+      // An administrator grants the role now.
+      backend.roles = ['AccreditationLead'];
+
+      // The token already in the browser predates the grant. Retrying with it
+      // must NOT suddenly work - claims are fixed at issue time.
+      await page.click('#retryBoot');
+      await awaitReload(page);
+      v = await view(page);
+      assert.ok(/لا توجد صلاحية|no platform role/i.test(v.mainText),
+        'an old token must not acquire a role it was never issued with');
+
+      // A full sign-out and fresh sign-in mints a token that carries it.
+      await signOutAndLand(page);
+      await signIn(page);
+      v = await view(page);
+      assert.equal(v.userRole, 'AccreditationLead', 'a fresh sign-in must carry the new role');
+      assert.ok(v.mainText.length > 100 && !/لا توجد صلاحية/.test(v.mainText),
+        'the dashboard must be usable after re-authenticating with the granted role');
+    } finally { await ctx.close(); }
+  });
+});
+
+// ============ Keycloak's own callback errors (Sprint 23.8 section H)
+
+describe('the identity provider returns an error on the callback', () => {
+  test('authentication_expired is reported and a new attempt is possible', async () => {
+    resetBackend(); backend.idpError = 'authentication_expired';
+    const { ctx, page, errors } = await newPage();
+    try {
+      await page.goto(`${SITE_ORIGIN}/`);
+      await page.waitForSelector('#loginBtn', { state: 'visible' });
+      await page.click('#loginBtn');
+      await page.waitForSelector('#kc-login');
+      await page.fill('#username', 'pios-test');
+      await page.fill('#password', 'whatever');
+      await page.click('#kc-login');
+      await page.waitForSelector('#loginScreen', { state: 'visible', timeout: 20000 });
+
+      const box = await page.evaluate(() => ({
+        errVisible: getComputedStyle(document.querySelector('#loginError')).display !== 'none',
+        errText: document.querySelector('#loginError')?.textContent || '',
+        btnDisabled: document.querySelector('#loginBtn')?.disabled,
+        url: location.href,
+        authed: window.PIOS_AUTH.isAuthenticated(),
+        tx: sessionStorage.getItem('pios-oidc-tx') || localStorage.getItem('pios-oidc-tx'),
+      }));
+      assert.equal(box.errVisible, true, 'the provider error must be shown, not swallowed');
+      assert.match(box.errText, /authentication_expired/);
+      assert.equal(box.btnDisabled, false, 'the user must be able to try again');
+      assert.equal(box.authed, false, 'a failed callback must not produce a session');
+      assert.equal(box.tx, null, 'the transaction must be cleared after a failed callback');
+      assert.ok(!box.url.includes('error='), 'the error must be stripped from the address bar');
+      assert.deepEqual(errors, [], 'no uncaught errors on a provider failure');
+
+      // And a genuine retry still works.
+      backend.idpError = null;
+      await signIn(page);
+      assert.equal((await view(page)).userRole, 'AccreditationLead');
+    } finally { await ctx.close(); }
   });
 });
