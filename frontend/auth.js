@@ -97,6 +97,32 @@
   };
   tx.sweep();
 
+  /* Auth-stage reporting.
+   *
+   * Enough to tell WHERE a sign-in stopped without ever recording WHAT was
+   * exchanged. Only a stage name and a coarse error category are kept - never
+   * an access or refresh token, never the authorization code, never the PKCE
+   * verifier or state value, never a password. `stage()` takes no free-form
+   * data, so there is no path by which a secret could be passed in.
+   */
+  const STAGES = [
+    'AUTH_START', 'REDIRECTING', 'CALLBACK_RECEIVED', 'STATE_VALID',
+    'TOKEN_EXCHANGE_START', 'TOKEN_EXCHANGE_OK', 'SESSION_ESTABLISHED',
+    'API_AUTH_OK', 'REFRESH_OK', 'SIGNED_OUT',
+  ];
+  let last = null;
+  function stage(name, errorCategory) {
+    if (!STAGES.includes(name)) return last;
+    last = { stage: name, at: new Date().toISOString() };
+    if (errorCategory) last.error = String(errorCategory);
+    try {
+      // eslint-disable-next-line no-console
+      console.log(`[pios-auth] ${name}${errorCategory ? ' ' + errorCategory : ''}`);
+    } catch (e) { /* console may be unavailable */ }
+    return last;
+  }
+  const lastStage = () => (last ? { ...last } : null);
+
   const configured = () => !!(OIDC.issuer && OIDC.clientId);
 
   // Top-level navigation is funnelled through one seam. Browsers make
@@ -181,6 +207,7 @@
   }
 
   async function login(returnHash) {
+    stage('AUTH_START');
     if (!configured()) throw new Error('OIDC is not configured');
     const verifier = randomString(64);
     const st = randomString(32);
@@ -199,6 +226,7 @@
     // otherwise authenticate correctly at Keycloak only to be bounced back to
     // the sign-in screen. This now requires BOTH stores to be unavailable.
     if (!kept) {
+      stage('AUTH_START', 'STORAGE_BLOCKED');
       throw new Error(
         'المتصفح يمنع تخزين بيانات الموقع بالكامل، ولا يمكن إتمام تسجيل الدخول. ' +
         'اسمح ببيانات الموقع لهذا العنوان ثم أعد المحاولة. / The browser is blocking ' +
@@ -216,6 +244,7 @@
       code_challenge: await s256(verifier),
       code_challenge_method: 'S256',
     });
+    stage('REDIRECTING');
     navigate(`${endpoints().authorize}?${p.toString()}`);
   }
 
@@ -227,10 +256,12 @@
     const oidcError = q.get('error');
 
     if (oidcError) {
+      stage('CALLBACK_RECEIVED', 'IDP_ERROR');
       cleanUrl();
       throw new Error(q.get('error_description') || oidcError);
     }
     if (!code) return false;
+    stage('CALLBACK_RECEIVED');
 
     // Read from whichever store still holds it (session first, then the
     // durable copy), then erase it from BOTH immediately. The transaction is
@@ -244,6 +275,7 @@
     // opposite responses - a missing transaction is recoverable by retrying, a
     // differing state is a genuine CSRF signal and never is.
     if (!t) {
+      stage('CALLBACK_RECEIVED', 'TRANSACTION_MISSING');
       cleanUrl();
       throw new Error(
         'انتهت مهلة تسجيل الدخول أو تعذّر حفظ بياناته. اضغط زر الدخول مرة أخرى. / ' +
@@ -252,10 +284,12 @@
       );
     }
     if (returnedState !== t.state) {
+      stage('CALLBACK_RECEIVED', 'STATE_MISMATCH');
       cleanUrl();
       throw new Error('state mismatch');
     }
-    if (!t.verifier) { cleanUrl(); throw new Error('missing PKCE verifier'); }
+    if (!t.verifier) { stage('CALLBACK_RECEIVED', 'VERIFIER_MISSING'); cleanUrl(); throw new Error('missing PKCE verifier'); }
+    stage('STATE_VALID');
     const verifier = t.verifier;
 
     const body = new URLSearchParams({
@@ -265,6 +299,7 @@
       client_id: OIDC.clientId,
       code_verifier: verifier,
     });
+    stage('TOKEN_EXCHANGE_START');
     const r = await fetch(endpoints().token, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -272,9 +307,11 @@
     });
     if (!r.ok) {
       const detail = await r.json().catch(() => ({}));
+      stage('TOKEN_EXCHANGE_START', 'TOKEN_EXCHANGE_FAILED');
       cleanUrl();
       throw Object.assign(new Error(detail.error_description || detail.error || 'token exchange failed'), { status: r.status });
     }
+    stage('TOKEN_EXCHANGE_OK');
     writeTokens(await r.json());
     // The transaction was already erased from both stores above; `ret` came
     // with it, so nothing is left behind after a successful sign-in.
@@ -301,8 +338,9 @@
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
     });
-    if (!r.ok) { writeTokens(null); return false; }
+    if (!r.ok) { writeTokens(null); stage('REFRESH_OK', 'REFRESH_FAILED'); return false; }
     writeTokens(await r.json());
+    stage('REFRESH_OK');
     return true;
   }
 
@@ -310,6 +348,7 @@
     const t = readTokens();
     writeTokens(null);
     tx.clear();
+    stage('SIGNED_OUT');
     if (!configured()) { location.hash = '#/dashboard'; location.reload(); return; }
     const p = new URLSearchParams({
       client_id: OIDC.clientId,
@@ -322,7 +361,7 @@
   window.PIOS_AUTH = {
     configured, login, completeLogin, refresh, logout,
     accessToken, isAuthenticated, claims,
-    setNavigator,
+    setNavigator, stage, lastStage,
     _internals: { s256, randomString, readTokens, writeTokens, tx, TX_TTL_MS },
   };
 })();

@@ -16,6 +16,7 @@
     // before surfacing it, so a working session is not dropped needlessly.
     if(r.status===401&&AUTH&&await AUTH.refresh().catch(()=>false)){({r,url}=await rawFetch(path,opts,AUTH.accessToken()))}
     if(!r.ok){const body=await r.json().catch(()=>({})); throw Object.assign(new Error(body.detail||r.statusText||'Request failed'),{status:r.status,url,body});}
+    if(AUTH&&AUTH.isAuthenticated()) AUTH.stage('API_AUTH_OK');
     return r.headers.get('content-type')?.includes('json')?r.json():r.blob()};
   // Distinguishes the four cases the user can actually act on: demo mode, a
   // network/CORS failure with NO HTTP response, an auth failure, and a real
@@ -169,6 +170,7 @@
       // the sign-in screen despite a live Keycloak session. api() already
       // refreshes on a 401; startup has to do the same or it contradicts it.
       if(!AUTH.isAuthenticated() && !(await AUTH.refresh().catch(()=>false))){ showLogin(); return }
+      AUTH.stage('SESSION_ESTABLISHED');
       hideLogin();
     }
     load();
