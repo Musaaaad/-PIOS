@@ -4,7 +4,10 @@
   const D = window.PIOS_DEMO || {};
   const storage = {get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
   const AUTH = window.PIOS_AUTH || null;
-  const state = {lang:storage.get('pios-lang')||'ar', demo:new URLSearchParams(location.search).get('demo')==='1'||C.demoMode, token:null, overview:null, worklist:[], notifications:[], standards:[], demoReason:null, phase:'idle', fault:null};
+  const state = {lang:storage.get('pios-lang')||'ar', demo:new URLSearchParams(location.search).get('demo')==='1'||C.demoMode, token:null, overview:null, worklist:[], notifications:[], standards:[], demoReason:null, phase:'idle', fault:null,
+    // Deployment acceptance is loaded from the backend on demand, never from
+    // demo data. null means "not fetched yet", not "nothing to report".
+    deployment:null, deploymentLoading:false, deploymentError:null, deploymentBusy:false, deploymentActionError:null};
   const $=s=>document.querySelector(s); const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const t=(ar,en)=>state.lang==='ar'?ar:en;
   const nav=[['dashboard','◫','لوحة التشغيل','Operations'],['worklist','☑','قائمة عملي','My Worklist'],['readiness','◉','الجاهزية وESR','Readiness & ESR'],['evidence','▣','الأدلة','Evidence'],['findings','⚠','Findings وCAPA','Findings & CAPA'],['documents','▤','الوثائق','Documents'],['exports','⇩','مركز التصدير','Export Center'],['pilot','◆','مركز التجربة','Pilot Center'],['deployment','⬡','قبول النشر','Deployment Acceptance'],['operations','◎','مركز التشغيل','Command Center'],['assurance','↻','الضمان المستمر','Continuous Assurance'],['intelligence','✦','الذكاء والمخاطر','Intelligence & Risk'],['actions','➜','من الذكاء إلى العمل','Intelligence to Action'],['committee','♙','اللجنة وجودة القرار','Committee & Decision Quality'],['institutional-pilot','◒','التجربة المؤسسية','Institutional Pilot'],['governance','◈','الحوكمة والإصدارات','Governance & Releases'],['security','⌾','الهوية والتشغيل','Identity & Runtime']];
@@ -153,6 +156,9 @@
    */
   async function load(){
     state.phase='loading'; state.fault=null;
+    // Drop the cached acceptance summary so the global refresh genuinely
+    // re-reads it from the backend instead of redisplaying a stale copy.
+    state.deployment=null; state.deploymentError=null; state.deploymentActionError=null;
     render();                                   // shell + skeleton, immediately
     try{
       const [overview,work,notes,identity]=await Promise.all([api('/dashboard/overview'),api('/worklists/my'),api('/notifications?status=Unread'),api('/identity/me')]);
@@ -211,7 +217,119 @@
   function documents(){shellTitle('Master Document Register','Master Document Register');return `<div class="toolbar"><div class="filters"><input class="filter" placeholder="${t('بحث بالرمز أوالعنوان','Search code or title')}"/><select class="filter"><option>${t('جميع الحالات','All statuses')}</option><option>Effective</option><option>Review</option><option>Draft</option></select></div><button class="btn">${t('وثيقة جديدة','New document')}</button></div><div class="table-wrap"><table><thead><tr><th>${t('الرمز','Code')}</th><th>${t('العنوان','Title')}</th><th>${t('الإصدار','Version')}</th><th>${t('الحالة','Status')}</th><th>${t('المراجعة','Review')}</th><th></th></tr></thead><tbody>${D.documents.map(x=>`<tr><td><strong>${x.code}</strong></td><td>${x.title}</td><td>${x.version}</td><td>${pill(x.status)}</td><td>${x.review}</td><td><button class="btn secondary">${t('فتح','Open')}</button></td></tr>`).join('')}</tbody></table></div>`}
   function exports(){shellTitle('مركز التصدير','Export Center');const cards=[['readiness','CSV','مصفوفة الجاهزية','Readiness matrix'],['findings','CSV','سجل Findings','Findings register'],['capas','CSV','سجل CAPA','CAPA register'],['audit','CSV','مسار التدقيق','Audit trail'],['executive_pack','ZIP','الحزمة التنفيذية','Executive pack']];return `<div class="grid export-grid">${cards.map(([type,fmt,ar,en])=>`<article class="card export-card"><span class="pill">${fmt}</span><h3>${t(ar,en)}</h3><p>${t('يولد ملفًا محكومًا مع SHA-256 وسجل طلب وتنزيل.','Creates a governed file with SHA-256 and request/download audit.')}</p><button class="btn export-btn" data-type="${type}" data-format="${fmt.toLowerCase()}">${t('إنشاء التصدير','Create export')}</button></article>`).join('')}</div><section class="card" style="margin-top:1rem"><div class="section-title"><h2>${t('آخر عمليات التصدير','Recent exports')}</h2>${pill('Retention 30d')}</div><div class="empty">${t('سيظهر سجل الملفات عند الاتصال بالـBackend.','Export jobs appear when connected to the backend.')}</div></section>`}
   function pilot(){shellTitle('مركز تجربة طريف','Turaif Pilot Center');const p=D.pilot||{};const gates=p.gates||[];return `<section class="grid kpis">${kpi(t('بوابات ناجحة','Passed gates'),`${p.gates_pass||0}/${p.gates_total||16}`,t('بوابات تشغيل إلزامية','Mandatory runtime gates'),p.gates_pass===p.gates_total?'good':'warning')}${kpi(t('مستخدمو التجربة','Pilot users'),p.participants||0,t('8 أدوار مطلوبة','8 required roles'))}${kpi(t('طلبات P0','P0 requests'),p.p0_requests||0,t('المستهدف 48','Target 48'),p.p0_requests===48?'good':'critical')}${kpi(t('نجاح UAT','UAT pass rate'),`${p.uat_pass_rate||0}%`,t('P0/P1 يجب أن تنجح','P0/P1 must pass'),p.uat_pass_rate===100?'good':'warning')}</section><section class="grid section-grid"><article class="card"><div class="section-title"><h2>${t('بوابات التشغيل','Go-live gates')}</h2>${pill(p.status||'Draft')}</div>${gates.map(g=>`<div class="notice ${g.status==='Pass'?'Normal':g.status==='Fail'?'Critical':'Warning'}"><div class="section-title"><strong>${esc(g.code)}</strong>${pill(g.status)}</div><small class="muted">${esc(g.evidence||t('بانتظار الدليل','Evidence pending'))}</small></div>`).join('')}</article><article class="card"><div class="section-title"><h2>${t('قرار التشغيل','Go/No-Go')}</h2>${pill(p.go_live_ready?'Ready':'Blocked')}</div><div class="empty"><strong>${p.go_live_ready?t('جاهز لقرار رسمي','Ready for formal decision'):t('لا يزال محجوبًا','Still blocked')}</strong><p>${esc((p.blockers||[]).join(' • ')||t('لا توجد عوائق','No blockers'))}</p></div><div class="toolbar"><button class="btn">${t('تحديث التقييم','Refresh assessment')}</button><button class="btn secondary">${t('فتح UAT','Open UAT')}</button></div></article></section>`}
-  function deployment(){shellTitle('قبول النشر المؤسسي','Deployment Acceptance');const d=D.deployment||{};const checks=d.checks||[];return `<section class="grid kpis">${kpi(t('الفحوص الناجحة','Passed checks'),`${d.pass||0}/${d.total||24}`,t('24 فحص نشر','24 deployment checks'),d.ready?'good':'warning')}${kpi(t('فحوص فاشلة','Failed checks'),d.fail||0,t('تمنع التشغيل','Blocks go-live'),d.fail?'critical':'good')}${kpi(t('معلقة/محجوبة','Pending / blocked'),(d.pending||0)+(d.blocked||0),t('تحتاج دليل مؤسسي','Institutional evidence required'),'warning')}${kpi(t('نتيجة القبول','Acceptance outcome'),d.outcome||'NotAssessed',t('ليست قرار Go تلقائيًا','Not an automatic Go decision'),d.ready?'good':'critical')}</section><section class="grid section-grid"><article class="card"><div class="section-title"><h2>${t('بيئة النشر','Deployment environment')}</h2>${pill(d.environment_type||'Pilot')}</div><dl><dt>${t('الإصدار','Release')}</dt><dd>${esc(d.release_version||'1.1.0')}</dd><dt>${t('المصادقة','Authentication')}</dt><dd>${esc(d.auth_mode||'OIDC')}</dd><dt>${t('قاعدة البيانات','Database')}</dt><dd>${esc(d.database||'PostgreSQL')}</dd><dt>${t('التخزين','Storage')}</dt><dd>${esc(d.storage||'S3/MinIO')}</dd><dt>TLS</dt><dd>${d.tls?'Enabled':'Pending'}</dd></dl><div class="notice Warning">${t('نتائج العرض لا تمثل قبول البيئة المؤسسية الفعلية.','Demo results do not represent institutional deployment acceptance.')}</div></article><article class="card"><div class="section-title"><h2>${t('الفحوص الحرجة','Critical checks')}</h2>${pill(d.outcome||'ConditionalPass')}</div>${checks.map(x=>`<div class="notice ${x.status==='Pass'?'Normal':x.status==='Fail'?'Critical':'Warning'}"><div class="section-title"><strong>${esc(x.code)}</strong>${pill(x.status)}</div><small class="muted">${esc(x.evidence||t('بانتظار دليل','Evidence pending'))}</small></div>`).join('')}</article></section><section class="card" style="margin-top:1rem"><div class="section-title"><h2>${t('اختبارات الاستعادة والهوية','Recovery and identity validation')}</h2><button class="btn">${t('تشغيل الفحوص الآلية','Run automated checks')}</button></div><div class="grid esr-grid"><div class="esr-card"><strong>Backup/Restore</strong><small>${esc(d.backup_status||'Pending')}</small></div><div class="esr-card"><strong>OIDC/JWKS</strong><small>${esc(d.oidc_status||'Pending')}</small></div><div class="esr-card"><strong>RPO/RTO</strong><small>${esc(d.rpo_rto||'Not measured')}</small></div></div></section>`}
+  /* Deployment acceptance.
+   *
+   * Every value on this screen comes from GET /deployment/acceptance-summary,
+   * which reports stored acceptance runs and nothing else. It used to read
+   * window.PIOS_DEMO.deployment - a hand-written constant that showed
+   * DEV_TOKENS_DISABLED as "Fail / dev mode active" no matter what the live
+   * service was configured to do, and that no refresh, sign-in or environment
+   * change could ever move. An unmeasured gate now says so.
+   */
+  function deployment(){
+    shellTitle('قبول النشر المؤسسي','Deployment Acceptance');
+    const d=state.deployment;
+    if(state.deploymentError) return acceptanceFault();
+    if(!d) return acceptanceLoading();
+    const s=d.summary||{}, env=d.environment, checks=d.checks||[];
+    const assessed=d.assessed===true;
+    const outcome=s.outcome||'NotAssessed';
+    // deployment_ready comes from the backend rollup. The screen never derives
+    // "ready" itself, so it cannot disagree with the stored verdict.
+    const ready=s.deployment_ready===true;
+    return `<section class="grid kpis">
+      ${kpi(t('الفحوص الناجحة','Passed checks'),assessed?`${s.pass||0}/${s.total||0}`:'—',t('من كتالوج 24 فحصًا','Of a 24-check catalog'),ready?'good':'warning')}
+      ${kpi(t('فحوص فاشلة','Failed checks'),assessed?(s.fail||0):'—',t('تمنع التشغيل','Blocks go-live'),assessed&&s.fail?'critical':'')}
+      ${kpi(t('معلقة/محجوبة','Pending / blocked'),assessed?((s.pending||0)+(s.blocked||0)):'—',t('تحتاج دليلًا مؤسسيًا','Institutional evidence required'),'warning')}
+      ${kpi(t('نتيجة القبول','Acceptance outcome'),esc(outcome),t('ليست قرار Go تلقائيًا','Not an automatic Go decision'),ready?'good':'critical')}
+    </section>
+    ${assessed?'':`<div class="notice Critical" id="notAssessed"><div class="section-title"><strong>${t('لم يُجرَ أي تقييم قبول لهذه البيئة','No acceptance evaluation has been run for this deployment')}</strong>${pill('NotAssessed')}</div>
+      <p>${esc(acceptanceReasonText(d.reason))}</p>
+      <p class="muted">${t('البوابات أدناه غير مقاسة. غياب القياس ليس نجاحًا ولا فشلًا، ولا يجوز أن يُقرأ كأيٍّ منهما.','The gates below are unmeasured. An absent measurement is neither a pass nor a failure and must not be read as either.')}</p></div>`}
+    <section class="grid section-grid">
+      <article class="card"><div class="section-title"><h2>${t('بيئة النشر','Deployment environment')}</h2>${pill(env?env.environment_type:t('غير مسجّلة','Unregistered'))}</div>
+        ${env?`<dl><dt>${t('الرمز','Code')}</dt><dd>${esc(env.code)}</dd>
+          <dt>${t('الإصدار','Release')}</dt><dd>${esc(env.release_version)}</dd>
+          <dt>${t('المصادقة','Authentication')}</dt><dd>${esc(env.auth_mode)}</dd>
+          <dt>${t('قاعدة البيانات','Database')}</dt><dd>${esc(env.database_kind)}${env.database_version?' '+esc(env.database_version):''}</dd>
+          <dt>${t('التخزين','Storage')}</dt><dd>${esc(env.object_storage_kind)}</dd>
+          <dt>TLS</dt><dd>${env.tls_enabled?t('مفعّل','Enabled'):t('غير مفعّل','Not enabled')}</dd></dl>`
+        :`<div class="empty"><strong>${t('لا توجد بيئة نشر مسجّلة','No deployment environment is registered')}</strong>
+          <p>${t('يجب أن يسجّل مسؤول النظام بيئة نشر أولًا؛ خصائصها (النوع وTLS والتخزين) هي مُدخلات الفحوص نفسها ولا يجوز تخمينها.','A system administrator must register one first: its properties - type, TLS, storage - are the inputs the gates measure and cannot be guessed.')}</p></div>`}
+        <div class="notice ${assessed?'Normal':'Warning'}">${t('المصدر: تشغيل قبول مخزّن في الواجهة الخلفية.','Source: a stored backend acceptance run.')} ${d.run?`<strong>${esc(d.run.run_code)}</strong> · ${esc(d.run.status)} · ${esc(d.evaluated_at||t('بلا وقت تنفيذ','no execution time'))}`:t('لا يوجد تشغيل.','None recorded.')}</div>
+      </article>
+      <article class="card"><div class="section-title"><h2>${t('بوابات القبول','Acceptance gates')}</h2>${pill(outcome)}</div>
+        ${checks.map(x=>`<div class="notice ${x.status==='Pass'?'Normal':x.status==='Fail'?'Critical':'Warning'}">
+          <div class="section-title"><strong>${esc(x.check_code)}</strong>${pill(x.status)}</div>
+          <small class="muted">${esc(x.category)} · ${esc(x.execution_mode)} · ${esc(gateEvidenceText(x))}</small></div>`).join('')}
+      </article>
+    </section>
+    <section class="card" style="margin-top:1rem">
+      <div class="section-title"><h2>${t('اختبارات الاستعادة والهوية','Recovery and identity validation')}</h2>
+        <div class="toolbar">
+          <button class="btn secondary" id="reloadAcceptance">${t('إعادة قراءة النتيجة المخزّنة','Re-read stored result')}</button>
+          ${d.can_execute&&env?`<button class="btn" id="runAcceptance"${state.deploymentBusy?' disabled':''}>${state.deploymentBusy?t('جارٍ التقييم…','Evaluating…'):t('إعادة تقييم الفحوص الآلية','Re-evaluate automated gates')}</button>`:''}
+        </div></div>
+      ${d.can_execute?'':`<div class="notice Warning">${t('إعادة التقييم تتطلب دور SystemAdmin أو AccreditationLead.','Re-evaluation requires the SystemAdmin or AccreditationLead role.')}</div>`}
+      <p class="muted">${t('«إعادة القراءة» تعرض آخر نتيجة مخزّنة دون تغييرها. «إعادة التقييم» تقيس البوابات الآلية الآن وتحفظ تشغيلًا جديدًا — وهي وحدها التي تغيّر أي قيمة.','"Re-read" shows the last stored result unchanged. "Re-evaluate" measures the automated gates now and stores a new run - it alone changes any value.')}</p>
+      <div class="grid esr-grid">
+        <div class="esr-card"><strong>Backup/Restore</strong><small>${esc(d.backup_restore?`${d.backup_restore.status} · ${d.backup_restore.run_code}`:t('لا يوجد سجل','No record'))}</small></div>
+        <div class="esr-card"><strong>OIDC/JWKS</strong><small>${esc(d.oidc_validation?`${d.oidc_validation.status} · ${d.oidc_validation.run_code}`:t('لا يوجد سجل','No record'))}</small></div>
+        <div class="esr-card"><strong>RPO/RTO</strong><small>${esc(rpoRtoText(d.backup_restore))}</small></div>
+      </div>
+      ${state.deploymentActionError?`<div class="api-error" id="acceptanceActionError">${esc(state.deploymentActionError)}</div>`:''}
+    </section>`;
+  }
+
+  /* Why nothing was measured. Each reason maps to a different operator action,
+   * so collapsing them into one "pending" would hide what to actually do. */
+  function acceptanceReasonText(reason){
+    if(reason==='no_environment') return t('لا توجد بيئة نشر مسجّلة، فلا يوجد ما يمكن تقييمه.','No deployment environment is registered, so there is nothing to evaluate.');
+    if(reason==='no_run') return t('البيئة مسجّلة لكن لم يُنفَّذ عليها أي تشغيل قبول بعد.','The environment is registered but no acceptance run has been executed against it.');
+    if(reason==='run_has_no_checks') return t('يوجد تشغيل قبول لكنه لا يحتوي على أي فحوص، فلا يمكن استخلاص نتيجة منه.','An acceptance run exists but carries no checks, so no verdict can be drawn from it.');
+    return t('حالة القبول غير معروفة.','The acceptance state is unknown.');
+  }
+  /* Never invent evidence text. A gate with no measurement says so. */
+  function gateEvidenceText(x){
+    if(x.status==='NotAssessed') return t('لم يُقس','Not measured');
+    const parts=[x.measured_value,x.evidence_reference,x.details].filter(Boolean);
+    return parts.length?parts.join(' · '):t('لا يوجد دليل مسجّل','No evidence recorded');
+  }
+  function rpoRtoText(b){
+    if(!b||(b.rpo_seconds==null&&b.rto_seconds==null)) return t('غير مقاس','Not measured');
+    return `RPO ${b.rpo_seconds==null?'—':b.rpo_seconds+'s'} · RTO ${b.rto_seconds==null?'—':b.rto_seconds+'s'}`;
+  }
+  function acceptanceLoading(){
+    return `<section class="card" aria-busy="true"><div class="section-title"><h2>${t('جارٍ قراءة نتيجة القبول من الخادم…','Reading the acceptance result from the backend…')}</h2></div>
+      <div class="progress" aria-hidden="true"><span style="width:40%"></span></div></section>`;
+  }
+  function acceptanceFault(){
+    return `<section class="card"><div class="section-title"><h2>${t('تعذّرت قراءة نتيجة القبول','The acceptance result could not be read')}</h2>${pill(state.deploymentError.status||'error')}</div>
+      <p>${esc(state.deploymentError.message)}</p>
+      <div class="notice Warning">${t('لا تُعرض أي بوابات هنا: عرض قيم غير مقروءة من الخادم كان سيكون اختلاقًا.','No gates are shown: displaying values not read from the backend would be a fabrication.')}</div>
+      <button id="reloadAcceptance" class="btn" style="margin-top:1rem">${t('إعادة المحاولة','Try again')}</button></section>`;
+  }
+
+  async function loadDeployment(){
+    state.deploymentLoading=true; state.deploymentError=null;
+    try{ state.deployment=await api('/deployment/acceptance-summary'); }
+    catch(e){ state.deployment=null; state.deploymentError={status:e&&e.status,message:apiErrorText(e)}; }
+    finally{ state.deploymentLoading=false; render(); }
+  }
+  async function evaluateAcceptance(){
+    if(state.deploymentBusy) return;
+    state.deploymentBusy=true; state.deploymentActionError=null; render();
+    try{
+      state.deployment=await api('/deployment/acceptance-summary/evaluate',{method:'POST'});
+      state.deploymentError=null;
+      toast(t(`تم التقييم: ${state.deployment.summary?.outcome||'—'}`,`Evaluated: ${state.deployment.summary?.outcome||'-'}`));
+    }catch(e){
+      // The stored result stays on screen untouched. A failed re-evaluation
+      // must not blank the gates or imply the previous verdict changed.
+      state.deploymentActionError=apiErrorText(e);
+    }
+    finally{ state.deploymentBusy=false; render(); }
+  }
   function operations(){shellTitle('مركز التشغيل والإطلاق','Operations Command Center');const o=D.operations||{};const slos=o.slos||[];const incidents=o.open_incidents||[];const c=o.cutover||{};const b=o.baseline||{};return `<section class="grid kpis">${kpi(t('الحالة التشغيلية','Operational status'),o.operational_ready?t('مستقرة','Ready'):t('محجوبة','Blocked'),t('تتأثر بـSLO والحوادث وCutover','Driven by SLOs, incidents and cutover'),o.operational_ready?'good':'critical')}${kpi(t('خرق SLO','SLO breaches'),slos.filter(x=>x.status==='Breach').length,t('يتطلب حادثة وتصعيد','Requires incident and escalation'),slos.some(x=>x.status==='Breach')?'critical':'good')}${kpi(t('حوادث P0/P1','Open P0/P1'),incidents.filter(x=>['P0','P1'].includes(x.severity)).length,t('تمنع Go','Blocks Go'),'critical')}${kpi(t('مهام Cutover','Cutover tasks'),`${c.summary_json?.task_pass||0}/${c.summary_json?.task_total||20}`,t('المهام الحرجة يجب أن تنجح','Critical tasks must pass'),'warning')}${kpi(t('Baseline','Baseline'),b.status||'None',t('ليست درجة اعتماد','Not an accreditation score'),b.critical_open_actions?'critical':'good')}</section><section class="grid section-grid"><article class="card"><div class="section-title"><h2>SLO</h2>${pill(slos.every(x=>x.status==='Pass')?'Pass':'Attention')}</div><div class="table-wrap"><table><thead><tr><th>Code</th><th>${t('الهدف','Target')}</th><th>${t('القيمة','Value')}</th><th>${t('الحالة','Status')}</th></tr></thead><tbody>${slos.map(x=>`<tr><td><strong>${esc(x.code)}</strong></td><td>${esc(x.target)}</td><td>${esc(x.value??'—')}</td><td>${pill(x.status)}</td></tr>`).join('')}</tbody></table></div></article><article class="card"><div class="section-title"><h2>${t('الحوادث المفتوحة','Open incidents')}</h2>${pill(incidents.length)}</div>${incidents.map(x=>`<div class="notice ${x.severity==='P0'?'Critical':'Warning'}"><div class="section-title"><strong>${esc(x.code)}</strong>${pill(x.severity)}</div><p>${esc(x.title)}</p><small>${esc(x.status)} · ${esc(x.owner_role_code)}</small></div>`).join('')||`<div class="empty">${t('لا توجد حوادث مفتوحة','No open incidents')}</div>`}</article></section><section class="grid section-grid"><article class="card"><div class="section-title"><h2>Cutover</h2>${pill(c.status||'None')}</div><dl><dt>Code</dt><dd>${esc(c.code||'—')}</dd><dt>${t('القرار','Decision')}</dt><dd>${esc(c.decision||'Pending')}</dd><dt>${t('جاهز لـGo','Go ready')}</dt><dd>${c.summary_json?.go_ready?'YES':'NO'}</dd><dt>${t('عوائق حرجة','Critical blockers')}</dt><dd>${esc((c.summary_json?.critical_not_passed||[]).join(', ')||'—')}</dd></dl></article><article class="card"><div class="section-title"><h2>${t('إصدار Baseline','Baseline release')}</h2>${pill(b.status||'None')}</div><dl><dt>Code</dt><dd>${esc(b.code||'—')}</dd><dt>${t('التصنيف','Classification')}</dt><dd>${esc(b.classification||'—')}</dd><dt>${t('الجاهزية','Readiness')}</dt><dd>${esc(b.readiness_score??'—')}%</dd><dt>${t('الحالة','Status')}</dt><dd>${esc(b.overall_status||'—')}</dd></dl><div class="notice Warning">${t('Operational Baseline يمكن نشره مع الفجوات، لكنه لا يدعي EvidenceReady.','An Operational Baseline may publish gaps but does not claim EvidenceReady.')}</div></article></section>`}
   function assurance(){shellTitle('الضمان المستمر والتوسع','Continuous Assurance & Rollout');const a=D.assurance||{};const cycle=a.latest_cycle||{};const dq=a.data_quality||{};const waves=a.rollout_waves||[];return `<section class="grid kpis">${kpi(t('برامج الضمان','Assurance programs'),a.programs||0,t('دورية ومبنية على المخاطر','Recurring and risk-based'),'good')}${kpi(t('الضوابط النشطة','Active controls'),a.controls||0,t('P0 وESR أولًا','P0 and ESR first'),'warning')}${kpi(t('متأخر','Overdue controls'),a.overdue_controls||0,t('تحتاج تصعيدًا','Needs escalation'),a.overdue_controls?'critical':'good')}${kpi(t('مشكلات جودة البيانات','Data-quality issues'),dq.issue_total||0,t('لا تمثل Findings السريرية','Not clinical findings'),dq.issue_total?'warning':'good')}${kpi(t('مواقع موجات التوسع','Rollout sites'),waves.reduce((n,w)=>n+(w.site_total||0),0),t('قالب طريف للتوسع','Turaif template for scale'))}</section><section class="grid section-grid"><article class="card"><div class="section-title"><h2>${t('آخر دورة ضمان','Latest assurance cycle')}</h2>${pill(cycle.status||'NotStarted')}</div><dl><dt>Code</dt><dd>${esc(cycle.code||'—')}</dd><dt>${t('الفترة','Period')}</dt><dd>${esc(cycle.period_label||'—')}</dd><dt>${t('ناجح','Passed')}</dt><dd>${esc(cycle.task_pass??0)}</dd><dt>${t('فشل','Failed')}</dt><dd>${esc(cycle.task_fail??0)}</dd><dt>${t('متبقٍ','Pending')}</dt><dd>${esc(cycle.task_pending??0)}</dd></dl><div class="notice Warning">${t('فشل الضابط الحرج ينشئ Finding ولا يتحول إلى أخضر بمجرد إكمال المهمة.','A failed critical control creates a Finding and cannot turn green merely because the task was completed.')}</div></article><article class="card"><div class="section-title"><h2>${t('فحص جودة البيانات','Data-quality scan')}</h2>${pill(dq.quality_pass?'Pass':'Attention')}</div><div class="grid esr-grid"><div class="esr-card"><strong>P0</strong><small>${dq.by_severity?.P0||0}</small></div><div class="esr-card"><strong>P1</strong><small>${dq.by_severity?.P1||0}</small></div><div class="esr-card"><strong>P2</strong><small>${dq.by_severity?.P2||0}</small></div></div><button class="btn">${t('تشغيل الفحص','Run scan')}</button></article></section><section class="card" style="margin-top:1rem"><div class="section-title"><h2>${t('موجات التوسع','Cluster rollout waves')}</h2><button class="btn secondary">${t('موجة جديدة','New wave')}</button></div><div class="table-wrap"><table><thead><tr><th>${t('الموجة','Wave')}</th><th>${t('الحالة','Status')}</th><th>${t('المواقع','Sites')}</th><th>${t('جاهزة','Ready')}</th><th>${t('محجوبة','Blocked')}</th></tr></thead><tbody>${waves.map(w=>`<tr><td><strong>${esc(w.code)}</strong><br><small>${esc(w.name)}</small></td><td>${pill(w.status)}</td><td>${w.site_total||0}</td><td>${w.site_ready||0}</td><td>${w.site_blocked||0}</td></tr>`).join('')||`<tr><td colspan="5" class="empty">${t('لا توجد موجات توسع بعد','No rollout waves yet')}</td></tr>`}</tbody></table></div></section>`}
 
@@ -226,7 +344,20 @@
 
   function institutionalPilot(){shellTitle('التجربة المؤسسية ونتائجها','Institutional Pilot & Outcomes');const p=D.institutional_pilot||{};const metrics=p.metrics||[];const sessions=p.sessions||[];return `<section class="grid kpis">${kpi(t('وضع التشغيل','Run mode'),p.run_mode||'Synthetic',t('مؤسسي أو اصطناعي','Institutional or synthetic'),p.run_mode==='Institutional'?'good':'warning')}${kpi(t('هويات موثقة','Verified identities'),p.verified_identities||0,t('OIDC + role + site','OIDC + role + site'))}${kpi(t('جلسات مكتملة','Completed sessions'),p.completed_sessions||0,t('حوكمة + قرار + جودة','Governance + decision + quality'))}${kpi(t('مؤشرات مقاسة','Measured metrics'),metrics.length,t('لا تساوي امتثالاً','Not compliance'))}${kpi(t('تقارير منشورة','Published reports'),p.published_reports||0,t('بموافقة بشرية وSHA-256','Human approval + SHA-256'))}</section><section class="grid section-grid"><article class="card"><div class="section-title"><h2>${t('بوابات التفعيل','Activation gates')}</h2>${pill(p.status||'Draft')}</div><ol><li>${t('لجنة فعالة وميثاق معتمد','Active committee and approved charter')}</li><li>${t('هويات OIDC ونطاق TGH موثقان','Verified OIDC identities and TGH scope')}</li><li>${t('مصادر بيانات مصنفة ومجردة من المعرفات','Classified, deidentified data sources')}</li><li>${t('لا توجد حوادث P0/P1 تشغيلية مفتوحة','No open operational P0/P1 incidents')}</li><li>${t('قرار Pilot Go أو ConditionalGo عند الربط','Pilot Go or ConditionalGo when linked')}</li></ol><div class="notice Warning">${t('نتيجة التجربة لا تعتمد الامتثال ولا تنشر EvidenceReady.','Pilot outcomes do not approve compliance or publish EvidenceReady.')}</div></article><article class="card"><div class="section-title"><h2>${t('تبني المستخدمين والتغذية الراجعة','Adoption & feedback')}</h2>${pill(p.average_feedback??'—')}</div><dl><dt>${t('أحداث التبني','Adoption events')}</dt><dd>${p.adoption_events||0}</dd><dt>${t('سجلات التغذية الراجعة','Feedback records')}</dt><dd>${p.feedback_count||0}</dd><dt>${t('الحالة','Status')}</dt><dd>${esc(p.status||'Draft')}</dd></dl><div class="notice Normal">${t('يتم ترميز هوية المشارك ولا يسمح ببيانات المرضى في التعليقات.','Participant identity is tokenized and patient data is prohibited in feedback.')}</div></article></section><section class="card" style="margin-top:1rem"><div class="section-title"><h2>${t('الجلسات والمؤشرات','Sessions & metrics')}</h2><button class="btn secondary">${t('تقييم البوابات','Evaluate gates')}</button></div><div class="table-wrap"><table><thead><tr><th>${t('العنصر','Item')}</th><th>${t('الحالة','Status')}</th><th>${t('القيمة الحالية','Current')}</th><th>${t('الهدف','Target')}</th><th>${t('المرجع','Evidence')}</th></tr></thead><tbody>${metrics.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${pill(x.status)}</td><td>${esc(x.current_value??'—')} ${esc(x.unit||'')}</td><td>${esc(x.target_value??'—')} ${esc(x.unit||'')}</td><td>${esc(x.source_reference||'—')}</td></tr>`).join('')||sessions.map(x=>`<tr><td><strong>${esc(x.code)}</strong></td><td>${pill(x.status)}</td><td>${x.decision_count||0} ${t('قرار','decisions')}</td><td>${x.quality_review_count||0} ${t('مراجعة جودة','quality reviews')}</td><td>${esc(x.evidence_reference||'—')}</td></tr>`).join('')||`<tr><td colspan="5" class="empty">${t('لا توجد نتائج مؤسسية بعد','No institutional outcomes recorded')}</td></tr>`}</tbody></table></div></section>`}
   const renderers={dashboard,worklist,readiness,evidence,findings,documents,exports,pilot,deployment,operations,assurance,intelligence,actions,committee,institutionalPilot,'institutional-pilot':institutionalPilot,governance,security};
-  function render(){setDir();renderNav();$('#version').textContent=C.appVersion||'0.1.0';$('#userName').textContent=state.identity?.display_name||t('مستخدم المنصة','PIOS User');$('#userRole').textContent=(state.identity?.roles||[])[0]||'';const av=document.querySelector('.user-chip .avatar');if(av)av.textContent=($('#userName').textContent||'').trim().charAt(0);const lo=$('#logoutBtn'); if(lo) lo.hidden=!(AUTH&&AUTH.isAuthenticated());$('#alertBadge').textContent=state.notifications.length;$('#demoNotice').hidden=!state.demo;$('#demoNotice').textContent=state.demo?(state.demoReason?`${D.notice} — ${state.demoReason}`:D.notice):'';$('#main').innerHTML=mainHtml();renderAlerts();bindPage()}
+  function render(){setDir();renderNav();$('#version').textContent=C.appVersion||'0.1.0';$('#userName').textContent=state.identity?.display_name||t('مستخدم المنصة','PIOS User');$('#userRole').textContent=(state.identity?.roles||[])[0]||'';const av=document.querySelector('.user-chip .avatar');if(av)av.textContent=($('#userName').textContent||'').trim().charAt(0);const lo=$('#logoutBtn'); if(lo) lo.hidden=!(AUTH&&AUTH.isAuthenticated());$('#alertBadge').textContent=state.notifications.length;$('#demoNotice').hidden=!state.demo;$('#demoNotice').textContent=state.demo?(state.demoReason?`${D.notice} — ${state.demoReason}`:D.notice):'';$('#main').innerHTML=mainHtml();renderAlerts();bindPage();maybeLoadRouteData()}
+
+  /* Route-scoped data, fetched only when its screen is actually open.
+   *
+   * The guards make this self-terminating: loadDeployment() sets the loading
+   * flag before its first await and always ends with either state.deployment
+   * or state.deploymentError set, so the re-render it triggers cannot start a
+   * second fetch. */
+  function maybeLoadRouteData(){
+    if(route()!=='deployment') return;
+    if(state.phase!=='ready') return;
+    if(state.deployment||state.deploymentLoading||state.deploymentError) return;
+    loadDeployment();
+  }
 
   /* What goes in #main.
    *
@@ -290,7 +421,7 @@
       <button id="retryBoot" class="btn" style="margin-top:1rem">${t('إعادة المحاولة','Try again')}</button></section>`;
   }
   function renderAlerts(){$('#alertsList').innerHTML=state.notifications.length?state.notifications.map(n=>`<article class="notice ${n.severity}"><div class="section-title"><strong>${esc(n.title)}</strong>${pill(n.severity)}</div><p>${esc(n.message)}</p><button class="btn secondary" onclick="location.hash='${esc(n.action_url||'#/dashboard')}'">${t('فتح','Open')}</button></article>`).join(''):`<div class="empty">${t('لا توجد تنبيهات','No alerts')}</div>`}
-  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});wire('#sessionLogout',()=>doLogout());wire('#sessionLogin',()=>doLogin());wire('#retryBoot',()=>load());wire('#reAuth',()=>doLogin());wire('#signOutDenied',()=>doLogout());markUnwiredControls()}
+  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});wire('#sessionLogout',()=>doLogout());wire('#sessionLogin',()=>doLogin());wire('#retryBoot',()=>load());wire('#reAuth',()=>doLogin());wire('#signOutDenied',()=>doLogout());wire('#reloadAcceptance',()=>loadDeployment());wire('#runAcceptance',()=>evaluateAcceptance());markUnwiredControls()}
   $('#alertsBtn').onclick=()=>{$('#alertDrawer').classList.add('open');$('#alertDrawer').setAttribute('aria-hidden','false')};$('#closeDrawer').onclick=()=>{$('#alertDrawer').classList.remove('open');$('#alertDrawer').setAttribute('aria-hidden','true')};$('#refreshBtn').onclick=load;$('#langBtn').onclick=()=>{state.lang=state.lang==='ar'?'en':'ar';storage.set('pios-lang',state.lang);render()};$('#demoBtn').onclick=()=>{state.demo=!state.demo;load()};$('#menuBtn').onclick=()=>toggleSidebar();
   $('#navBackdrop')?.addEventListener('click',closeSidebar);
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSidebar();$('#alertDrawer')?.classList.remove('open');$('#alertDrawer')?.setAttribute('aria-hidden','true')}});
