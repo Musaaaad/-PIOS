@@ -35,7 +35,7 @@
     // A 401 may simply mean the access token aged out. Try one silent refresh
     // before surfacing it, so a working session is not dropped needlessly.
     if(r.status===401&&AUTH&&await AUTH.refresh().catch(()=>false)){({r,url}=await rawFetch(path,opts,AUTH.accessToken()))}
-    if(!r.ok){const body=await r.json().catch(()=>({})); throw Object.assign(new Error(body.detail||r.statusText||'Request failed'),{status:r.status,url,body});}
+    if(!r.ok){const body=await r.json().catch(()=>({})); throw Object.assign(new Error(detailText(body&&body.detail)||r.statusText||'Request failed'),{status:r.status,url,body});}
     if(AUTH&&AUTH.isAuthenticated()) AUTH.stage('API_AUTH_OK');
     return r.headers.get('content-type')?.includes('json')?r.json():r.blob()};
   // Distinguishes the four cases the user can actually act on: demo mode, a
@@ -43,12 +43,21 @@
   // HTTP error. "Load failed"/"Failed to fetch" with no status is always the
   // second: the browser blocked or could not complete the request, so the
   // status code the user asks for genuinely does not exist.
+  /* FastAPI's `detail` is usually a string but may be structured - the
+   * registration refusal carries {message, problems}. String() on that yields
+   * "[object Object]", which tells the user nothing. */
+  function detailText(detail){
+    if(!detail) return '';
+    if(typeof detail==='string') return detail;
+    if(typeof detail==='object'&&typeof detail.message==='string') return detail.message;
+    return '';
+  }
   function apiErrorText(e){
     if(e&&e.demo) return t('وضع العرض التجريبي مفعّل: لا يوجد اتصال بالخادم.','Demo mode is active: no backend connection.');
     if(e&&e.timeout) return t(`لم يستجب الخادم خلال المهلة المحددة (${e.message}). قد تكون الخدمة في وضع السكون؛ أعد المحاولة.`,`The backend did not respond within the timeout (${e.message}). It may have been idle - please retry.`);
     if(e&&e.network) return t(`فشل الاتصال بالخادم قبل وصول أي استجابة HTTP (${e.message}). السبب الغالب: حجب CORS — يجب ضبط PIOS_CORS_ORIGINS على الواجهة الخلفية ليشمل ${location.origin} — أو تعذّر الوصول للشبكة/الشهادة.`,`Network failure before any HTTP response (${e.message}). Most likely CORS: the backend's PIOS_CORS_ORIGINS must include ${location.origin}. Otherwise DNS/TLS/offline.`);
     const st=e&&e.status;
-    const srv=e&&e.body&&e.body.detail?String(e.body.detail):'';
+    const srv=detailText(e&&e.body&&e.body.detail);
     if(st===401) return t(`لم تُقبل الجلسة (HTTP 401): يلزم تسجيل الدخول من جديد.${srv?' — '+srv:''}`,`Session not accepted (HTTP 401): sign in again.${srv?' - '+srv:''}`);
     if(st===403) return t(`ليست لديك صلاحية لهذا الإجراء (HTTP 403).${srv?' — '+srv:''}`,`You do not have permission for this (HTTP 403).${srv?' - '+srv:''}`);
     if(st===503) return t(`الخدمة أو مزود الهوية غير متاح حاليًا (HTTP 503).${srv?' — '+srv:''}`,`The service or identity provider is unavailable (HTTP 503).${srv?' - '+srv:''}`);
@@ -245,7 +254,8 @@
     </section>
     ${assessed?'':`<div class="notice Critical" id="notAssessed"><div class="section-title"><strong>${t('لم يُجرَ أي تقييم قبول لهذه البيئة','No acceptance evaluation has been run for this deployment')}</strong>${pill('NotAssessed')}</div>
       <p>${esc(acceptanceReasonText(d.reason))}</p>
-      <p class="muted">${t('البوابات أدناه غير مقاسة. غياب القياس ليس نجاحًا ولا فشلًا، ولا يجوز أن يُقرأ كأيٍّ منهما.','The gates below are unmeasured. An absent measurement is neither a pass nor a failure and must not be read as either.')}</p></div>`}
+      <p class="muted">${t('البوابات أدناه غير مقاسة. غياب القياس ليس نجاحًا ولا فشلًا، ولا يجوز أن يُقرأ كأيٍّ منهما.','The gates below are unmeasured. An absent measurement is neither a pass nor a failure and must not be read as either.')}</p>
+      ${d.reason==='no_environment'?registrationPanel(d):''}</div>`}
     <section class="grid section-grid">
       <article class="card"><div class="section-title"><h2>${t('بيئة النشر','Deployment environment')}</h2>${pill(env?env.environment_type:t('غير مسجّلة','Unregistered'))}</div>
         ${env?`<dl><dt>${t('الرمز','Code')}</dt><dd>${esc(env.code)}</dd>
@@ -279,6 +289,38 @@
       </div>
       ${state.deploymentActionError?`<div class="api-error" id="acceptanceActionError">${esc(state.deploymentActionError)}</div>`:''}
     </section>`;
+  }
+
+  /* Registering the running deployment.
+   *
+   * "Render is up" and "a deployment environment is registered" are different
+   * facts: the second is a database row that only exists once someone records
+   * it. This panel closes that gap - but only when the service is fully
+   * declared. Every unmet declaration is named with the exact environment
+   * variable, because the alternative (registering with placeholder values)
+   * would make gates pass about a machine that is not this deployment.
+   */
+  function registrationPanel(d){
+    const problems=d.declaration_problems||[];
+    if(problems.length) return `<div class="notice Warning" id="declarationProblems">
+      <strong>${t('لا يمكن تسجيل هذه البيئة بعد: إعلانات ناقصة','This deployment cannot be registered yet: declarations are missing')}</strong>
+      <ul>${problems.map(p=>`<li>${esc(p)}</li>`).join('')}</ul>
+      <p class="muted">${t('اضبط هذه المتغيّرات على خدمة pios-api في Render ثم أعد المحاولة. لن تُسجَّل قيم افتراضية نيابةً عنك.','Set these variables on the pios-api service in Render, then retry. No placeholder values will be registered on your behalf.')}</p></div>`;
+    if(!d.can_register) return `<div class="notice Warning">${t('التسجيل يتطلب دور SystemAdmin أو AccreditationLead أو PharmacyDirector.','Registration requires the SystemAdmin, AccreditationLead or PharmacyDirector role.')}</div>`;
+    return `<div class="toolbar"><button class="btn" id="registerEnv"${state.deploymentBusy?' disabled':''}>${state.deploymentBusy?t('جارٍ التسجيل…','Registering…'):t('تسجيل بيئة النشر الحالية','Register the running deployment')}</button></div>
+      <p class="muted">${t('يسجّل ما أعلنته هذه الخدمة عن نفسها فقط: النوع والإصدار ووضع المصادقة وTLS والتخزين وعنوان الواجهة، مع فحص حيّ لقاعدة البيانات.','Records only what this service declares about itself - type, release, auth mode, TLS, storage and frontend URL - plus a live probe of the database.')}</p>`;
+  }
+
+  async function registerEnvironment(){
+    if(state.deploymentBusy) return;
+    state.deploymentBusy=true; state.deploymentActionError=null; render();
+    try{
+      await api('/deployment/environments/register-current',{method:'POST'});
+      toast(t('تم تسجيل بيئة النشر','Deployment environment registered'));
+      state.deployment=await api('/deployment/acceptance-summary');
+      state.deploymentError=null;
+    }catch(e){ state.deploymentActionError=apiErrorText(e); }
+    finally{ state.deploymentBusy=false; render(); }
   }
 
   /* Why nothing was measured. Each reason maps to a different operator action,
@@ -421,7 +463,7 @@
       <button id="retryBoot" class="btn" style="margin-top:1rem">${t('إعادة المحاولة','Try again')}</button></section>`;
   }
   function renderAlerts(){$('#alertsList').innerHTML=state.notifications.length?state.notifications.map(n=>`<article class="notice ${n.severity}"><div class="section-title"><strong>${esc(n.title)}</strong>${pill(n.severity)}</div><p>${esc(n.message)}</p><button class="btn secondary" onclick="location.hash='${esc(n.action_url||'#/dashboard')}'">${t('فتح','Open')}</button></article>`).join(''):`<div class="empty">${t('لا توجد تنبيهات','No alerts')}</div>`}
-  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});wire('#sessionLogout',()=>doLogout());wire('#sessionLogin',()=>doLogin());wire('#retryBoot',()=>load());wire('#reAuth',()=>doLogin());wire('#signOutDenied',()=>doLogout());wire('#reloadAcceptance',()=>loadDeployment());wire('#runAcceptance',()=>evaluateAcceptance());markUnwiredControls()}
+  function bindPage(){wire('#refreshWork',()=>load());wire('#calcBtn',()=>calculateSnapshot());document.querySelectorAll('.standard-cell[data-standard]').forEach(c=>{markWired(c);c.onclick=()=>openStandard(c.dataset.standard);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStandard(c.dataset.standard)}}});wire('.open-standard[data-standard]',(ev,b)=>openStandard(b.dataset.standard));document.querySelectorAll('.export-btn').forEach(b=>{markWired(b);b.onclick=async()=>{try{if(state.demo)throw new Error('demo');const j=await api('/exports',{method:'POST',body:JSON.stringify({export_type:b.dataset.type,file_format:b.dataset.format,filters:{}})});toast(t(`تم إنشاء ${j.file_name}`,`Created ${j.file_name}`))}catch(e){toast(t('تمت محاكاة إنشاء ملف التصدير','Export creation simulated'))}}});wire('#sessionLogout',()=>doLogout());wire('#sessionLogin',()=>doLogin());wire('#retryBoot',()=>load());wire('#reAuth',()=>doLogin());wire('#signOutDenied',()=>doLogout());wire('#reloadAcceptance',()=>loadDeployment());wire('#runAcceptance',()=>evaluateAcceptance());wire('#registerEnv',()=>registerEnvironment());markUnwiredControls()}
   $('#alertsBtn').onclick=()=>{$('#alertDrawer').classList.add('open');$('#alertDrawer').setAttribute('aria-hidden','false')};$('#closeDrawer').onclick=()=>{$('#alertDrawer').classList.remove('open');$('#alertDrawer').setAttribute('aria-hidden','true')};$('#refreshBtn').onclick=load;$('#langBtn').onclick=()=>{state.lang=state.lang==='ar'?'en':'ar';storage.set('pios-lang',state.lang);render()};$('#demoBtn').onclick=()=>{state.demo=!state.demo;load()};$('#menuBtn').onclick=()=>toggleSidebar();
   $('#navBackdrop')?.addEventListener('click',closeSidebar);
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSidebar();$('#alertDrawer')?.classList.remove('open');$('#alertDrawer')?.setAttribute('aria-hidden','true')}});

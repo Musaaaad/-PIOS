@@ -11,11 +11,15 @@ from app.core.security import Principal, get_principal, require_roles
 from app.db.session import get_db
 from app.models.entities import (Organization,Site,DeploymentEnvironment,DeploymentAcceptanceRun,DeploymentAcceptanceCheck,BackupRestoreRun,OidcValidationRun,PilotCycle)
 from app.schemas.deployment import (EnvironmentCreate,EnvironmentRead,AcceptanceRunCreate,AcceptanceRunRead,CheckUpdate,CheckRead,BackupRestoreCreate,BackupRestoreRead,OidcValidationCreate,OidcValidationRead)
-from app.services.deployment_acceptance import (ensure_checks,execute_automated_checks,calculate_summary,summarize_checks,record_backup_result,record_oidc_result,write_report,utcnow,unmeasured_checks,not_assessed_summary,NOT_ASSESSED)
+from app.services.deployment_acceptance import (ensure_checks,execute_automated_checks,calculate_summary,summarize_checks,record_backup_result,record_oidc_result,write_report,utcnow,unmeasured_checks,not_assessed_summary,describe_current_environment,NOT_ASSESSED)
 
 router=APIRouter()
 
 EXECUTE_ROLES=('SystemAdmin','AccreditationLead')
+# Same set that may create an environment by hand, so registering the running
+# deployment introduces no new privilege - only a less error-prone way to do
+# what these roles could already do.
+REGISTER_ROLES=('SystemAdmin','AccreditationLead','PharmacyDirector')
 
 def _actor(principal):
     try:return UUID(principal.user_id)
@@ -70,8 +74,13 @@ def _summary_payload(db,principal):
     catalog=unmeasured_checks()
     base={'assessed':False,'can_execute':can_execute,'environment':None,'run':None,
           'checks':catalog,'backup_restore':None,'oidc_validation':None,
-          'catalog_total':len(catalog),'evaluated_at':None}
+          'catalog_total':len(catalog),'evaluated_at':None,
+          'can_register':bool(set(principal.roles)&set(REGISTER_ROLES)),'declaration_problems':[]}
     if env is None:
+        # Nothing is registered. Say what is stopping registration, so the
+        # screen can name the environment variables instead of dead-ending.
+        _,problems=describe_current_environment(db)
+        base['declaration_problems']=problems
         base['summary']=not_assessed_summary('no_environment'); base['reason']='no_environment'; return base
     base['environment']=EnvironmentRead.model_validate(env).model_dump(mode='json')
     backups=db.scalar(select(BackupRestoreRun).where(BackupRestoreRun.environment_id==env.id).order_by(BackupRestoreRun.created_at.desc()))
@@ -97,6 +106,43 @@ def _summary_payload(db,principal):
 @router.get('/deployment/acceptance-summary')
 def acceptance_summary(db:Annotated[Session,Depends(get_db)],principal:Annotated[Principal,Depends(get_principal)]):
     return _summary_payload(db,principal)
+
+@router.get('/deployment/environments/current/declaration')
+def current_declaration(db:Annotated[Session,Depends(get_db)],principal:Annotated[Principal,Depends(get_principal)]):
+    """What this service would register itself as, and what is missing.
+
+    A read-only preview so an operator can see exactly which environment
+    variables still have to be set before registration will be accepted,
+    rather than discovering them one 409 at a time.
+    """
+    fields,problems=describe_current_environment(db)
+    return {'fields':fields,'problems':problems,'can_register':bool(set(principal.roles)&set(REGISTER_ROLES)),
+            'registered':_default_environment(db) is not None}
+
+@router.post('/deployment/environments/register-current',status_code=201)
+def register_current_environment(request:Request,db:Annotated[Session,Depends(get_db)],principal:Annotated[Principal,Depends(require_roles(*REGISTER_ROLES))]):
+    """Register the deployment this process is running in.
+
+    Not an auto-registration: every field is either a value the operator
+    declared through the service's own environment variables or a live probe
+    of the database this process is connected to. Nothing is inferred, and a
+    declaration that is absent - or still at a local-development default that
+    a gate would wrongly pass on - is refused with the exact variables to set.
+    """
+    org,site=_org_site(db)
+    fields,problems=describe_current_environment(db)
+    if problems:
+        raise HTTPException(422,{'message':'This deployment is not fully declared, so it cannot be registered without guessing.','problems':problems})
+    existing=db.scalar(select(DeploymentEnvironment).where(DeploymentEnvironment.site_id==site.id,DeploymentEnvironment.code==fields['code']))
+    row=existing or DeploymentEnvironment(site_id=site.id,code=fields['code'])
+    if existing is None: db.add(row)
+    for key,value in fields.items():
+        if key!='code': setattr(row,key,value)
+    row.status='Registered'; row.active=True
+    db.flush()
+    add_audit_event(db,request,principal,org.id,'deployment.environment.register_current','DeploymentEnvironment',str(row.id),after=fields)
+    db.commit(); db.refresh(row)
+    return {'environment':EnvironmentRead.model_validate(row).model_dump(mode='json'),'created':existing is None}
 
 @router.post('/deployment/acceptance-summary/evaluate')
 def evaluate_acceptance(request:Request,db:Annotated[Session,Depends(get_db)],principal:Annotated[Principal,Depends(require_roles(*EXECUTE_ROLES))]):

@@ -40,6 +40,69 @@ ACCEPTANCE_CATALOG = [
 
 def utcnow(): return datetime.now(timezone.utc)
 
+# Environment types whose acceptance is judged against production rules.
+PROD_LIKE_TYPES = {"Pilot", "Staging", "Production"}
+ENVIRONMENT_TYPES = {"Integration", *PROD_LIKE_TYPES}
+
+
+def _server_version(db: Session) -> str | None:
+    """The database version as the driver reports it after connecting."""
+    info = getattr(db.get_bind().dialect, "server_version_info", None)
+    return ".".join(str(x) for x in info) if info else None
+
+
+def describe_current_environment(db: Session):
+    """This service's own deployment, read from its configuration.
+
+    Returns (fields, problems). `fields` is never partially guessed: every
+    value traces to a setting the operator declared or to a live probe of the
+    database this process is connected to. `problems` lists declarations that
+    are missing or still at a local-development default that would produce a
+    misleading gate result - and a non-empty `problems` means registration must
+    be refused, not completed with placeholders.
+
+    The distinction that matters: a default of `false` (monitoring, TLS) is
+    safe, because it can only make a gate fail. A default that names a place -
+    `local`, `http://localhost:8080` - is not, because a gate would PASS on it
+    while describing a machine that is not this deployment.
+    """
+    s = get_settings()
+    problems: list[str] = []
+
+    declared_type = (s.deployment_environment_type or "").strip()
+    if not declared_type:
+        problems.append("PIOS_DEPLOYMENT_ENVIRONMENT_TYPE is not set; it decides whether production rules apply and cannot be inferred")
+    elif declared_type not in ENVIRONMENT_TYPES:
+        problems.append(f"PIOS_DEPLOYMENT_ENVIRONMENT_TYPE={declared_type!r} is not one of {sorted(ENVIRONMENT_TYPES)}")
+    prod_like = declared_type in PROD_LIKE_TYPES
+
+    code = (s.deployment_environment_code or "").strip()
+    if prod_like and code in {"", "local"}:
+        problems.append("PIOS_DEPLOYMENT_ENVIRONMENT_CODE is still the 'local' default; set it to this deployment's identifier")
+
+    frontend = (s.frontend_base_url or "").strip()
+    if prod_like and ("localhost" in frontend or "127.0.0.1" in frontend or not frontend):
+        problems.append(f"PIOS_FRONTEND_BASE_URL is {frontend or 'unset'}; FRONTEND_URL_CONFIGURED would pass on an address that is not this deployment")
+
+    fields = {
+        "code": code or "local",
+        "name": (s.deployment_environment_name or "").strip() or code or "local",
+        "environment_type": declared_type,
+        "frontend_base_url": frontend or None,
+        "database_kind": db.get_bind().dialect.name,
+        "database_version": _server_version(db),
+        # The catalog asks whether storage is S3-compatible; the service knows
+        # which backend it actually loads.
+        "object_storage_kind": "S3" if s.object_storage_backend == "s3" else "Local",
+        "auth_mode": "OIDC" if s.auth_mode == "oidc" else "Dev",
+        "oidc_issuer": s.oidc_issuer,
+        "release_version": s.release_version,
+        "release_sha": s.release_sha,
+        "tls_enabled": s.tls_enabled,
+        "monitoring_enabled": s.monitoring_enabled,
+    }
+    return fields, problems
+
 def ensure_checks(db: Session, run: DeploymentAcceptanceRun):
     existing={x.check_code for x in db.scalars(select(DeploymentAcceptanceCheck).where(DeploymentAcceptanceCheck.run_id==run.id)).all()}
     for code,category,required,mode,expected in ACCEPTANCE_CATALOG:

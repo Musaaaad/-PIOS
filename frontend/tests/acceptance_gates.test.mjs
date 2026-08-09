@@ -68,9 +68,10 @@ const CATALOG_CODES = [
 ];
 
 /** The backend's shape when nothing has ever been measured. */
-const notAssessed = (reason = 'no_environment') => ({
+const notAssessed = (reason = 'no_environment', extra = {}) => ({
   assessed: false, reason, can_execute: true, environment: null, run: null, evaluated_at: null,
   catalog_total: 24, backup_restore: null, oidc_validation: null,
+  can_register: true, declaration_problems: [], ...extra,
   checks: CATALOG_CODES.map(code => ({
     check_code: code, category: 'Platform', required: true, execution_mode: 'Automated',
     expected_value: 'x', status: 'NotAssessed', measured_value: null, evidence_reference: null,
@@ -103,7 +104,7 @@ const assessed = (overrides = {}) => ({
  * what POST .../evaluate answers. Both record their calls so a test can prove
  * whether the screen asked the backend at all.
  */
-async function open({ summary = notAssessed(), evaluate = null, summaryStatus = 200, hash = '#/deployment' } = {}) {
+async function open({ summary = notAssessed(), evaluate = null, register = null, summaryStatus = 200, hash = '#/deployment' } = {}) {
   const url = `${origin}/${hash}`;
   const html = await (await fetch(`${origin}/`)).text();
   const calls = [];
@@ -112,6 +113,13 @@ async function open({ summary = notAssessed(), evaluate = null, summaryStatus = 
   const stub = async (u, opts = {}) => {
     const s = String(u), method = (opts.method || 'GET').toUpperCase();
     calls.push({ url: s, method });
+    if (s.includes('/deployment/environments/register-current')) {
+      if (!register) {
+        return json({ detail: { message: 'This deployment is not fully declared, so it cannot be registered without guessing.', problems: ['PIOS_DEPLOYMENT_ENVIRONMENT_TYPE is not set'] } }, 422);
+      }
+      summaryBody = register;   // the screen re-reads the summary after registering
+      return json({ environment: register.environment, created: true }, 201);
+    }
     if (s.includes('/deployment/acceptance-summary/evaluate')) {
       if (!evaluate) return json({ detail: 'No deployment environment is registered.' }, 409);
       summaryBody = evaluate;
@@ -245,6 +253,65 @@ describe('an unmeasured gate is reported as unmeasured', () => {
     assert.ok(block, 'the gate is not rendered at all');
     assert.ok(!block.textContent.includes('dev mode active'), 'the demo evidence string is still on screen');
     assert.ok(!block.classList.contains('Critical'), 'an unmeasured gate is still styled as a failure');
+  });
+});
+
+// ------------------------------------------------------ 3b. registering the running deployment
+
+describe('registering the deployment this service runs in', () => {
+  test('an undeclared service names the variables instead of dead-ending', async () => {
+    const { doc } = await open({
+      summary: notAssessed('no_environment', { declaration_problems: ['PIOS_DEPLOYMENT_ENVIRONMENT_TYPE is not set; it decides whether production rules apply and cannot be inferred'] }),
+    });
+    assert.ok(doc.querySelector('#declarationProblems'), 'no guidance offered for an undeclared deployment');
+    assert.match(mainText(doc), /PIOS_DEPLOYMENT_ENVIRONMENT_TYPE/);
+    assert.equal(doc.querySelector('#registerEnv'), null, 'registration offered while declarations are missing');
+  });
+
+  test('a fully declared service offers registration', async () => {
+    const { doc } = await open({ summary: notAssessed('no_environment') });
+    assert.ok(doc.querySelector('#registerEnv'), 'a declared deployment cannot be registered from the screen');
+    assert.equal(doc.querySelector('#declarationProblems'), null);
+  });
+
+  test('registering posts and then re-reads the summary', async () => {
+    const registered = { ...notAssessed('no_run'), environment: assessed().environment };
+    const { doc, calls } = await open({ summary: notAssessed('no_environment'), register: registered });
+    doc.querySelector('#registerEnv').click();
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(calls.filter(c => c.method === 'POST' && c.url.includes('register-current')).length, 1);
+    assert.ok(acceptanceCalls(calls).length >= 2, 'the screen did not re-read after registering');
+    assert.match(mainText(doc), /لم يُنفَّذ عليها أي تشغيل قبول/, 'the screen did not advance past no_environment');
+  });
+
+  test('registration is never offered on a screen that already has an environment', async () => {
+    const { doc } = await open({ summary: { ...notAssessed('no_run'), environment: assessed().environment } });
+    assert.equal(doc.querySelector('#registerEnv'), null);
+    assert.equal(doc.querySelector('#declarationProblems'), null);
+  });
+
+  test('a user without the role is not offered registration', async () => {
+    const { doc } = await open({ summary: notAssessed('no_environment', { can_register: false }) });
+    assert.equal(doc.querySelector('#registerEnv'), null);
+    assert.match(mainText(doc), /SystemAdmin/);
+  });
+
+  test('a refused registration reports the server message, not [object Object]', async () => {
+    const { doc } = await open({ summary: notAssessed('no_environment'), register: null });
+    doc.querySelector('#registerEnv').click();
+    await new Promise(r => setTimeout(r, 200));
+    const box = doc.querySelector('#acceptanceActionError');
+    assert.ok(box, 'the refusal was not reported');
+    assert.ok(!box.textContent.includes('[object Object]'), 'a structured detail rendered as [object Object]');
+    assert.match(box.textContent, /not fully declared/);
+  });
+
+  test('a refused registration still shows no gates as passed', async () => {
+    const { doc } = await open({ summary: notAssessed('no_environment'), register: null });
+    doc.querySelector('#registerEnv').click();
+    await new Promise(r => setTimeout(r, 200));
+    assert.ok(doc.querySelector('#notAssessed'), 'the unmeasured banner disappeared after a failed registration');
+    assert.equal((mainText(doc).match(/لم يُقس/g) || []).length, 24);
   });
 });
 
