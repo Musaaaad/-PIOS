@@ -67,16 +67,50 @@ def _pilot_metrics(db: Session, run: DeploymentAcceptanceRun):
     gate=db.scalar(select(PilotGateCheck).where(PilotGateCheck.pilot_cycle_id==pilot.id,PilotGateCheck.gate_code=="UAT_CRITICAL_PASS"))
     return {"users_ready":users_ready,"p0_count":p0_count,"uat_ready":bool(gate and gate.status=="Pass"),"participant_count":len(participants)}
 
-def calculate_summary(db: Session, run: DeploymentAcceptanceRun):
-    rows=list(db.scalars(select(DeploymentAcceptanceCheck).where(DeploymentAcceptanceCheck.run_id==run.id).order_by(DeploymentAcceptanceCheck.check_code)).all())
+def summarize_checks(rows):
+    """Roll check rows up into a verdict. Pure: reads rows, writes nothing.
+
+    Read paths need the same arithmetic as calculate_summary() without its side
+    effect of stamping the run - a GET that mutates the run it is reporting on
+    cannot be trusted to report what is stored.
+    """
     summary={"total":len(rows),"required":sum(x.required for x in rows),"pass":sum(x.status=="Pass" for x in rows),"fail":sum(x.status=="Fail" for x in rows),"pending":sum(x.status=="Pending" for x in rows),"blocked":sum(x.status=="Blocked" for x in rows),"waived":sum(x.status=="Waived" for x in rows)}
     blockers=[x.check_code for x in rows if x.required and x.status not in {"Pass","Waived"}]
     if any(x.status=="Fail" and x.required for x in rows): outcome="Fail"
     elif blockers: outcome="ConditionalPass"
     else: outcome="Pass"
     summary["blockers"]=blockers; summary["deployment_ready"]=outcome=="Pass"; summary["outcome"]=outcome
-    run.summary_json=summary; run.outcome=outcome
     return summary
+
+def calculate_summary(db: Session, run: DeploymentAcceptanceRun):
+    rows=list(db.scalars(select(DeploymentAcceptanceCheck).where(DeploymentAcceptanceCheck.run_id==run.id).order_by(DeploymentAcceptanceCheck.check_code)).all())
+    summary=summarize_checks(rows)
+    run.summary_json=summary; run.outcome=summary["outcome"]
+    return summary
+
+# The verdict for "nobody has assessed this deployment". It is deliberately NOT
+# one of the stored CheckStatus values: an unmeasured gate must never be able to
+# collide with a measured one, in either direction.
+NOT_ASSESSED = "NotAssessed"
+
+def unmeasured_checks():
+    """The catalog rendered as explicitly unmeasured gates.
+
+    Returned when no acceptance run exists, so the screen can name all 24 gates
+    without inventing a status for any of them. Every field that would carry a
+    measurement is null, because no measurement was taken.
+    """
+    return [{"check_code":code,"category":category,"required":required,"execution_mode":mode,
+             "expected_value":expected,"status":NOT_ASSESSED,"measured_value":None,
+             "evidence_reference":None,"details":None,"checked_at":None}
+            for code,category,required,mode,expected in ACCEPTANCE_CATALOG]
+
+def not_assessed_summary(reason: str):
+    """Fail-closed rollup. Never ready, never Pass, and it says why."""
+    return {"total":len(ACCEPTANCE_CATALOG),"required":sum(x[2] for x in ACCEPTANCE_CATALOG),
+            "pass":0,"fail":0,"pending":0,"blocked":0,"waived":0,
+            "blockers":[x[0] for x in ACCEPTANCE_CATALOG if x[2]],
+            "deployment_ready":False,"outcome":NOT_ASSESSED,"reason":reason}
 
 def execute_automated_checks(db: Session, run: DeploymentAcceptanceRun, env: DeploymentEnvironment):
     settings=get_settings(); ensure_checks(db,run)
