@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     release_sha: str | None = None
     frontend_base_url: str = "http://localhost:8080"
     deployment_environment_code: str = "local"
+    # The deployment's own classification. Deliberately no default: it decides
+    # `prod_like` in the acceptance catalog, and every safety gate there
+    # (DEV_TOKENS_DISABLED, TLS_ENABLED, CORS_RESTRICTED,
+    # OBJECT_STORAGE_CONFIGURED, OIDC_MODE_ENABLED, MONITORING_ENABLED) is
+    # waived when it is false. Any default at all would therefore be a
+    # security verdict this service invented about itself.
+    deployment_environment_type: str | None = None  # Integration|Pilot|Staging|Production
+    deployment_environment_name: str | None = None
     monitoring_enabled: bool = False
     tls_enabled: bool = False
     backup_storage_root: str = "./var/backups"

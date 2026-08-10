@@ -26,6 +26,49 @@ them as two different buttons:
   a new run, and writes a signed report. This is the only path that can change
   a gate's value.
 
+## Registering the deployment
+
+A running service is not a registered environment. "pios-api is up" is an
+observation about a process; a `DeploymentEnvironment` row is a record someone
+creates. No seed, migration or startup hook has ever created one — which is why
+the screen reports `no_environment` on a perfectly healthy Render stack.
+
+`POST /deployment/environments/register-current` (SystemAdmin, AccreditationLead
+or PharmacyDirector — the same roles that could always create one by hand)
+records the deployment the process is running in. Preview it first with
+`GET /deployment/environments/current/declaration`.
+
+Nothing is inferred. Each field is either a value the operator declared through
+the service's own environment or a live probe of its database:
+
+| Field | Source |
+|---|---|
+| `code` / `name` | `PIOS_DEPLOYMENT_ENVIRONMENT_CODE` / `_NAME` |
+| `environment_type` | `PIOS_DEPLOYMENT_ENVIRONMENT_TYPE` — **required, no default** |
+| `frontend_base_url` | `PIOS_FRONTEND_BASE_URL` |
+| `release_version` / `release_sha` | `PIOS_RELEASE_VERSION` / `PIOS_RELEASE_SHA` |
+| `auth_mode` | `PIOS_AUTH_MODE` |
+| `oidc_issuer` | `PIOS_OIDC_ISSUER` |
+| `object_storage_kind` | `PIOS_OBJECT_STORAGE_BACKEND` |
+| `tls_enabled` | `PIOS_TLS_ENABLED` |
+| `monitoring_enabled` | `PIOS_MONITORING_ENABLED` |
+| `database_kind` / `database_version` | live probe of the bound connection |
+
+Registration is **refused** (422, listing the exact variables) when a
+declaration is absent or still at a local-development default that a gate would
+wrongly pass on. The distinction the guards enforce:
+
+- A default of `false` — monitoring, TLS — is safe. It can only make a gate
+  *fail*, and a gate that fails for want of a declaration is telling the truth.
+- A default that *names a place* — `local`, `http://localhost:8080` — is not.
+  `FRONTEND_URL_CONFIGURED` would report Pass about a machine that is not this
+  deployment.
+- `environment_type` may never be defaulted at all. It decides `prod_like`, and
+  a default of `Integration` would waive `DEV_TOKENS_DISABLED`, `TLS_ENABLED`,
+  `CORS_RESTRICTED`, `OBJECT_STORAGE_CONFIGURED`, `OIDC_MODE_ENABLED` and
+  `MONITORING_ENABLED` in one step — six security gates passed by a value
+  nobody set.
+
 ## Fail-closed rules
 
 1. No `DeploymentEnvironment` registered → `assessed: false`,
